@@ -1,41 +1,47 @@
-+
--
-*
-/
-%
-||
-&&
-!
-==
-!=
->
->=
-<=
-=
-+=
--=
-*=
-/=
-%=
-int 
-float
-string
-for
-while
-break
-continue
-if
-else
-return
-system
-out
-print
-in
-scan
-;
-,
-{
-}
-(
-)
-.
+OPERATORS:
++ -> ADD
+- -> SUB
+* -> MUL
+/ -> DIV
+% -> MOD
+|| -> LOGICAL_OR
+&& -> LOGICAL_AND
+! -> LOGICAL_NOT
+== -> EQUAL
+!= -> NOT_EQUAL
+> -> GREATER
+>= -> GREATER_EQUAL
+< -> LESS
+<= -> LESS_EQUAL
+= -> ASSIGN
++= -> ADD_ASSIGN
+-= -> SUB_ASSIGN
+*= -> MUL_ASSIGN
+/= -> DIV_ASSIGN
+%= -> MOD_ASSIGN
+
+RESERVED WORDS:
+int -> INT
+float -> FLOAT
+string -> STRING
+for -> FOR
+while -> WHILE
+break -> BREAK
+continue -> CONTINUE
+if -> IF
+else -> ELSE
+return -> RETURN
+system -> SYSTEM
+out -> OUT
+print -> PRINT
+in -> IN
+scan -> SCAN
+
+SYMBOLS:
+; -> SEMICOLON
+, -> COMMA
+{ -> OPEN_BRACE
+} -> CLOSE_BRACE
+( -> OPEN_PAREN
+) -> CLOSE_PAREN
+. -> DOT

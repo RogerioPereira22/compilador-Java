@@ -65,7 +65,6 @@ class Token:
     def __repr__(self):
         return f"Token({self.type}, '{self.lexeme}', Line: {self.line}, Column: {self.column})"
 
-# Função do analisador léxico atualizado para lidar com strings e caracteres de escape
 def lexer(source_code, operators, reserved_words, symbols):
     tokens = []
     line_number = 1
@@ -89,7 +88,8 @@ def lexer(source_code, operators, reserved_words, symbols):
             start_index = index
             index += 1
             while index < len(source_code):
-                if source_code[index] == '"' and source_code[index - 1] != '\\':
+                # Verifica se o caractere atual é uma aspa dupla que não foi escapada
+                if source_code[index] == '"' and (index == 0 or source_code[index - 1] != '\\'):
                     index += 1
                     break
                 index += 1
@@ -120,14 +120,7 @@ def lexer(source_code, operators, reserved_words, symbols):
             column_number += len(lexeme)
             continue
 
-        # Identifica operadores e símbolos
-        if char in symbols:
-            tokens.append(Token(symbols[char], char, line_number, column_number))
-            index += 1
-            column_number += 1
-            continue
-
-        # Identificação de operadores multi-caracteres
+        # Identificação de operadores multi-caracteres primeiro (antes de símbolos de um caractere)
         for op in sorted(operators.keys(), key=len, reverse=True):
             if source_code.startswith(op, index):
                 tokens.append(Token(operators[op], op, line_number, column_number))
@@ -135,11 +128,19 @@ def lexer(source_code, operators, reserved_words, symbols):
                 column_number += len(op)
                 break
         else:
+            # Identifica operadores e símbolos de um único caractere
+            if char in symbols:
+                tokens.append(Token(symbols[char], char, line_number, column_number))
+                index += 1
+                column_number += 1
+                continue
+
             # Tratamento de erro: Token não reconhecido
             error_context = source_code[index:index+10]  # Mostra até os próximos 10 caracteres
             raise ValueError(f"Token não reconhecido na linha {line_number}, coluna {column_number}: '{error_context}'")
 
     return tokens
+
 
 
 # Função principal
