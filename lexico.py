@@ -65,7 +65,6 @@ class Token:
     def __repr__(self):
         return f"Token({self.type}, '{self.lexeme}', Line: {self.line}, Column: {self.column})"
 
-# Função do analisador léxico usando os dicionários carregados, com tratamento de erros
 # Função do analisador léxico atualizado para lidar com strings e caracteres de escape
 def lexer(source_code, operators, reserved_words, symbols):
     tokens = []
