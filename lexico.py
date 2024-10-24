@@ -66,6 +66,7 @@ class Token:
         return f"Token({self.type}, '{self.lexeme}', Line: {self.line}, Column: {self.column})"
 
 # Função do analisador léxico usando os dicionários carregados, com tratamento de erros
+# Função do analisador léxico atualizado para lidar com strings e caracteres de escape
 def lexer(source_code, operators, reserved_words, symbols):
     tokens = []
     line_number = 1
@@ -82,6 +83,21 @@ def lexer(source_code, operators, reserved_words, symbols):
                 column_number = 0
             index += 1
             column_number += 1
+            continue
+
+        # Identifica strings (tratando caracteres de escape)
+        if char == '"':
+            start_index = index
+            index += 1
+            while index < len(source_code):
+                if source_code[index] == '"' and source_code[index - 1] != '\\':
+                    index += 1
+                    break
+                index += 1
+
+            lexeme = source_code[start_index:index]
+            tokens.append(Token("STRING", lexeme, line_number, column_number))
+            column_number += len(lexeme)
             continue
 
         # Identifica números
@@ -125,6 +141,7 @@ def lexer(source_code, operators, reserved_words, symbols):
             raise ValueError(f"Token não reconhecido na linha {line_number}, coluna {column_number}: '{error_context}'")
 
     return tokens
+
 
 # Função principal
 def main(nome_arquivo):
