@@ -118,7 +118,7 @@ def lexer(source_code, operators, reserved_words, symbols):
         # Identifica números
         if char.isdigit():
             start_index = index
-            while index < len(source_code) and (source_code[index].isdigit() or source_code[index] == '.'):
+            while index < len(source_code) and (source_code[index].isdigit() or source_code[index] == '.' or source_code[index]== "x"):
                 index += 1
             # Extrai o lexema do número e cria um token do tipo NUMBER
             
