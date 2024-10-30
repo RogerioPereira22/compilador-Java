@@ -21,21 +21,22 @@ OPERATORS:
 %= -> MOD_ASSIGN
 
 RESERVED WORDS:
-int -> INT
-float -> FLOAT
-string -> STRING
-for -> FOR
-while -> WHILE
-break -> BREAK
-continue -> CONTINUE
-if -> IF
-else -> ELSE
-return -> RETURN
-system -> SYSTEM
-out -> OUT
-print -> PRINT
-in -> IN
-scan -> SCAN
+int -> IDENTIFIER
+float -> IDENTIFIER
+string -> IDENTIFIER
+for -> IDENTIFIER
+while -> IDENTIFIER
+break -> IDENTIFIER
+continue -> IDENTIFIER
+if -> IDENTIFIER
+else -> IDENTIFIER
+return -> IDENTIFIER
+system -> IDENTIFIER
+out -> IDENTIFIER
+print -> IDENTIFIER
+in -> IDENTIFIER
+scan -> IDENTIFIER
+main -> IDENTIFIER
 
 SYMBOLS:
 ; -> SEMICOLON
