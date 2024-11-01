@@ -75,6 +75,54 @@ class Token:
     def __repr__(self):
         # Retorna uma representação em string do token para facilitar a leitura
         return f"Token({self.type}, '{self.lexeme}', Line: {self.line}, Column: {self.column})"
+def verificar_notacao_cientifica(numero):
+    """Verifica se o número está em notação científica válida."""
+    if 'e' in numero or 'E' in numero:
+        partes = numero.split('e' if 'e' in numero else 'E')
+        if len(partes) != 2:
+            print(f"Erro: Notação científica incorreta '{numero}'")
+            sys.exit(1)
+        
+        base, expoente = partes[0], partes[1]
+
+        if not base.replace('.', '', 1).isdigit() or base.count('.') > 1:
+            print(f"Erro: Base inválida na notação científica '{numero}'")
+            sys.exit(1)
+
+        if expoente[0] in '+-' and expoente[1:].isdigit() or expoente.isdigit():
+            return True
+        else:
+            print(f"Erro: Expoente inválido na notação científica '{numero}'")
+            sys.exit(1)
+    else:
+        return numero.replace('.', '', 1).isdigit()
+
+def verificar_overflow(numero):
+    """Verifica se o número inteiro está dentro do limite de um int32."""
+    try:
+        valor = int(float(numero))  # Converte para float, depois para int, em caso de ponto flutuante
+        if valor < -2_147_483_648 or valor > 2_147_483_647:
+            print(f"Erro: Overflow do número '{numero}'")
+            sys.exit(1)
+        return True
+    except ValueError:
+        print(f"Erro: Número inválido '{numero}'")
+        sys.exit(1)
+
+def verificar_formato_regional(numero):
+    """Verifica a formatação para garantir que o número não contenha separadores de milhar e use ponto como separador decimal."""
+    if ',' in numero:
+        print(f"Erro: Formato de número incorreto com vírgula '{numero}'")
+        sys.exit(1)
+    if '..' in numero:
+        print(f"Erro: Formato de número incorreto com múltiplos pontos '{numero}'")
+        sys.exit(1)
+    if '.' in numero:
+        partes = numero.split('.')
+        if len(partes) > 2 or not partes[0].isdigit() or (partes[1] and not partes[1].isdigit()):
+            print(f"Erro: Formato incorreto para decimal '{numero}'")
+            sys.exit(1)
+    return True
 
 # Função principal do analisador léxico
 def lexer(source_code, operators, reserved_words, symbols):
