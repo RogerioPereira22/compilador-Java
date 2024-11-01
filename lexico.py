@@ -209,6 +209,7 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         main(sys.argv[1])
     else:
+        
         # Exibe uma mensagem se nenhum argumento foi passado
         print("Erro: Nenhum arquivo foi especificado. Por favor, forneça o nome do arquivo.")
         sys.exit(1)
