@@ -44,49 +44,51 @@ Cada seção (`OPERATORS`, `RESERVED WORDS`, `SYMBOLS`) é separada e cada linha
    ```bash
    python analisador.py <nome_do_arquivo_de_codigo>
 
-Exemplo de execução:
+## Exemplo de execução:
 
 python analisador.py codigo_exemplo.txt
 
 
-Exemplos de Saída
+## Exemplos de Saída:
 
 Para o código a seguir:
 
-int main() {
-    int a, b;
-    float f;
-    f = 3.14;
-}
+    ```bash
+    int main() {
+        int a, b;
+        float f;
+        f = 3.14;
+    }
 
-A saída será:
+## A saída será:
 
-Token(IDENTIFIER, 'int', Line: 1, Column: 0)
-Token(IDENTIFIER, 'main', Line: 1, Column: 4)
-Token(OPEN_PAREN, '(', Line: 1, Column: 8)
-Token(CLOSE_PAREN, ')', Line: 1, Column: 9)
-Token(OPEN_BRACE, '{', Line: 1, Column: 10)
-Token(IDENTIFIER, 'int', Line: 2, Column: 5)
-Token(VARIABLE, 'a', Line: 2, Column: 9)
-Token(COMMA, ',', Line: 2, Column: 11)
-Token(VARIABLE, 'b', Line: 2, Column: 12)
-Token(SEMICOLON, ';', Line: 2, Column: 13)
-Token(IDENTIFIER, 'float', Line: 3, Column: 5)
-Token(VARIABLE, 'f', Line: 3, Column: 11)
-Token(SEMICOLON, ';', Line: 3, Column: 12)
-Token(VARIABLE, 'f', Line: 4, Column: 5)
-Token(ASSIGN, '=', Line: 4, Column: 7)
-Token(FLOAT, '3.14', Line: 4, Column: 9)
-Token(SEMICOLON, ';', Line: 4, Column: 13)
-Token(CLOSE_BRACE, '}', Line: 5, Column: 0)
+    ```bash
+    Token(IDENTIFIER, 'int', Line: 1, Column: 0)
+    Token(IDENTIFIER, 'main', Line: 1, Column: 4)
+    Token(OPEN_PAREN, '(', Line: 1, Column: 8)
+    Token(CLOSE_PAREN, ')', Line: 1, Column: 9)
+    Token(OPEN_BRACE, '{', Line: 1, Column: 10)
+    Token(IDENTIFIER, 'int', Line: 2, Column: 5)
+    Token(VARIABLE, 'a', Line: 2, Column: 9)
+    Token(COMMA, ',', Line: 2, Column: 11)
+    Token(VARIABLE, 'b', Line: 2, Column: 12)
+    Token(SEMICOLON, ';', Line: 2, Column: 13)
+    Token(IDENTIFIER, 'float', Line: 3, Column: 5)
+    Token(VARIABLE, 'f', Line: 3, Column: 11)
+    Token(SEMICOLON, ';', Line: 3, Column: 12)
+    Token(VARIABLE, 'f', Line: 4, Column: 5)
+    Token(ASSIGN, '=', Line: 4, Column: 7)
+    Token(FLOAT, '3.14', Line: 4, Column: 9)
+    Token(SEMICOLON, ';', Line: 4, Column: 13)
+    Token(CLOSE_BRACE, '}', Line: 5, Column: 0)
 
 
-Tratamento de Erros
+## Tratamento de Erros:
 O analisador léxico interrompe a execução quando encontra um erro e exibe uma mensagem descritiva. Exemplos de erros incluem:
 
-String não fechada: Exibe um erro se uma string não tiver uma aspa de fechamento.
-Número inválido: Exibe um erro se um número contiver caracteres inválidos.
-Token não reconhecido: Exibe um erro se o analisador encontra um caractere ou sequência de caracteres desconhecida.
+1.String não fechada: Exibe um erro se uma string não tiver uma aspa de fechamento.
+2.Número inválido: Exibe um erro se um número contiver caracteres inválidos.
+3.Token não reconhecido: Exibe um erro se o analisador encontra um caractere ou sequência de caracteres desconhecida.
 
 Licença
 Este projeto está sob a licença MIT.
