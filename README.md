@@ -62,7 +62,7 @@ Para o código a seguir:
 
 ## A saída será:
 
-    ```bash
+    ```b
     Token(IDENTIFIER, 'int', Line: 1, Column: 0)
     Token(IDENTIFIER, 'main', Line: 1, Column: 4)
     Token(OPEN_PAREN, '(', Line: 1, Column: 8)

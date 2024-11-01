@@ -97,57 +97,139 @@ def lexer(source_code, operators, reserved_words, symbols):
             continue
         
         # Identificação de strings com tratamento para strings mal formadas
-        if char == '"':
-            start_index = index  # Marca o início da string
-            index += 1  # Avança o índice para ignorar a aspa inicial
-            # Continua até encontrar o fechamento da string (aspas duplas não escapadas)
-            while index < len(source_code) and (source_code[index] != '"' or source_code[index - 1] == '\\'):
-                index += 1
-            if index < len(source_code):
-                # Extrai o lexema e adiciona um token do tipo STRING
-                lexeme = source_code[start_index:index + 1]
-                tokens.append(Token("STRING", lexeme, line_number, column_number))  # Adiciona o token à lista
-                column_number += len(lexeme)  # Atualiza a coluna
-                index += 1  # Avança após a aspa de fechamento
-            else:
-                # Erro se a string não estiver fechada
-                print(f"Erro: String não fechada na linha {line_number}, coluna {column_number}")
-                sys.exit(1)
-            continue
-
-        # Identificação de números com validação detalhada
-        if char.isdigit():
-            start_index = index  # Marca o início do número
-            has_decimal_point = False  # Flag para controlar o ponto decimal em números flutuantes
-            # Continua enquanto os caracteres formarem um número válido
-            while index < len(source_code) and (source_code[index].isdigit() or (source_code[index] == '.' and not has_decimal_point)):
-                if source_code[index] == '.':
-                    has_decimal_point = True  # Define a flag para indicar que já há um ponto decimal
-                index += 1
-            
-            lexeme = source_code[start_index:index]  # Extrai o lexema do número
-
-            # Verifica se há caracteres alfabéticos após o número, indicando erro
-            if index < len(source_code) and source_code[index].isalpha():
-                print(f"Erro: Número inválido '{lexeme + source_code[index]}' na linha {line_number}, coluna {column_number}")
-                sys.exit(1)
+        match char:
+            case '"':
+                start_index = index  # Marca o início da string
+                
+                index += 1  # Avança o índice para ignorar a aspa inicial
+                # Continua até encontrar o fechamento da string (aspas duplas não escapadas)
+                while index < len(source_code) and (source_code[index] != '"' or source_code[index - 1] == '\\' ):
+                    index += 1
+                if index < len(source_code):
+                    # Extrai o lexema e adiciona um token do tipo STRING
+                    lexeme = source_code[start_index:index + 1]
+                    tokens.append(Token("STRING", lexeme, line_number, column_number))  # Adiciona o token à lista
+                    column_number += len(lexeme)  # Atualiza a coluna
+                    index += 1  # Avança após a aspa de fechamento
+                else:
+                    # Erro se a string não estiver fechada
+                    print(f"Erro: String não fechada na linha {line_number}, coluna {column_number}")
+                    sys.exit(1)
                 continue
             
-            # Tenta classificar o número como FLOAT ou INT
-            try:
-                if '.' in lexeme:
-                    float_value = float(lexeme)
-                    tokens.append(Token("FLOAT", lexeme, line_number, column_number))  # Adiciona o token à lista
-                else:
-                    int_value = int(lexeme)
-                    tokens.append(Token("INT", lexeme, line_number, column_number))  # Adiciona o token à lista
-            except ValueError:
-                # Erro se o número é inválido
-                print(f"Erro: Número inválido '{lexeme}' na linha {line_number}, coluna {column_number}")
-                sys.exit(1)
+            case '/':
+                 start_index = index  # Marca o início do comentário
+                 index += 1  # Avança o índice para ignorar a barra inicial
+
+                # Verifica se é um comentário de bloco
+                 if index < len(source_code) and source_code[index] == '*':
+                    index += 1  # Avança após o '*'
+                    # Continua até encontrar o fechamento do comentário
+                    while index < len(source_code) - 1 and not (source_code[index] == '*' and source_code[index + 1] == '/'):
+                        index += 1
+                    index += 2  # Avança após o fechamento '*/'
+
+                    # Extrai o lexema e adiciona um token do tipo COMMENT
+                    lexeme = source_code[start_index:index]
+                    tokens.append(Token("COMMENT", lexeme, line_number, column_number))
+                    column_number += len(lexeme)  # Atualiza a coluna
+                 else:
+                    # Erro se o comentário não estiver fechado
+                    print(f"Erro: Comentário não fechado na linha {line_number}, coluna {column_number}")
+                    sys.exit(1)
+                 continue
+
+
+       # Identificação de números
+        # Caso inicie com um dígito ou com o prefixo "0x" indicando um número hexadecimal
+        if char.isdigit() or (char == '0' and index + 1 < len(source_code) and source_code[index + 1].lower() == 'x'):
+            start_index = index  # Marca o início do número
+            lexeme = ""  # Inicializa a string para acumular o lexema do número
+
+            # Hexadecimal
+            if char == '0' and index + 1 < len(source_code) and source_code[index + 1].lower() == 'x':
+                lexeme += "0x"
+                index += 2  # Avança o índice após "0x"
                 
-            column_number += len(lexeme)  # Atualiza a coluna
-            continue
+                # Loop para acumular os dígitos e letras válidas em hexadecimal (0-9 e a-f)
+                while index < len(source_code) and (source_code[index].isdigit() or source_code[index] in "abcdef"):
+                    if source_code[index] == '.':
+                        # Erro: ponto decimal encontrado em hexadecimal
+                        print(f"Erro: Ponto decimal não permitido em número hexadecimal '{lexeme + source_code[index]}' na linha {line_number}, coluna {column_number}")
+                        sys.exit(1)
+                    if source_code[index].isalpha() and source_code[index] not in "abcdef":
+                        # Erro: letra inválida fora do intervalo a-f
+                        print(f"Erro: Número hexadecimal inválido '{lexeme + source_code[index]}' na linha {line_number}, coluna {column_number}")
+                        sys.exit(1)
+                    lexeme += source_code[index]  # Adiciona o caractere ao lexema
+                    index += 1
+                
+                # Verificação final para garantir que haja conteúdo válido após "0x"
+                if len(lexeme) > 2:
+                    tokens.append(Token("HEXADECIMAL_INT", lexeme, line_number, column_number))
+                else:
+                    print(f"Erro: Número hexadecimal inválido '{lexeme}' na linha {line_number}, coluna {column_number}")
+                    sys.exit(1)
+                
+                column_number += len(lexeme)
+                continue
+
+            # Octal
+            elif char == '0' and index + 1 < len(source_code) and source_code[index + 1] in "01234567":
+                lexeme += "0"
+                index += 1
+                
+                # Loop para acumular os dígitos válidos em octal (0-7)
+                while index < len(source_code) and source_code[index] in "01234567":
+                    if source_code[index] == '.':
+                        # Erro: ponto decimal encontrado em octal
+                        print(f"Erro: Ponto decimal não permitido em número octal '{lexeme + source_code[index]}' na linha {line_number}, coluna {column_number}")
+                        sys.exit(1)
+                    lexeme += source_code[index]  # Adiciona o dígito ao lexema
+                    index += 1
+                
+                tokens.append(Token("OCTAL_INT", lexeme, line_number, column_number))
+                column_number += len(lexeme)
+                continue
+
+            # Float e Decimal (com verificação de `..`)
+            elif char.isdigit():
+                has_decimal_point = False  # Flag para detectar ponto decimal em números flutuantes
+                
+                # Loop para acumular dígitos e um único ponto decimal (se presente)
+                while index < len(source_code) and (source_code[index].isdigit() or source_code[index] == '.'):
+                    if source_code[index] == '.':
+                        if has_decimal_point:
+                            # Erro: dois pontos decimais consecutivos
+                            print(f"Erro: Número inválido com múltiplos pontos decimais '{lexeme}..' na linha {line_number}, coluna {column_number}")
+                            sys.exit(1)
+                        has_decimal_point = True  # Marca que já encontrou um ponto decimal
+                    lexeme += source_code[index]  # Adiciona o dígito ou ponto ao lexema
+                    index += 1
+                
+                # Adiciona '0' após o ponto se necessário, conforme especificação
+                if lexeme.endswith('.'):
+                    lexeme += '0'
+                
+                # Classifica como float se contém um ponto decimal, caso contrário, como decimal inteiro
+                if '.' in lexeme:
+                    tokens.append(Token("FLOAT", lexeme, line_number, column_number))
+                else:
+                    tokens.append(Token("DECIMAL_INT", lexeme, line_number, column_number))
+                
+                column_number += len(lexeme)
+                continue
+
+            # Decimal (inteiro)
+            elif char.isdigit():
+                # Loop para acumular apenas dígitos para números decimais inteiros
+                while index < len(source_code) and source_code[index].isdigit():
+                    lexeme += source_code[index]
+                    index += 1
+                
+                tokens.append(Token("DECIMAL_INT", lexeme, line_number, column_number))
+                column_number += len(lexeme)
+                continue
 
         # Identificação de identificadores e palavras reservadas
         if char.isalpha() or char == '_':
@@ -199,6 +281,7 @@ def main(nome_arquivo):
         # Exibe cada token encontrado
         for token in tokens_encontrados:
             print(token)
+            #print("testando!")
     except Exception as e:
         # Exibe erro genérico e interrompe a execução em caso de erro inesperado
         print(f"Erro inesperado: {e}")
