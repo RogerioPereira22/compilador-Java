@@ -1,3 +1,4 @@
+
 import sys  # Importa o módulo sys para utilizar sys.exit() e encerrar a execução em caso de erro
 
 # Função para ler o conteúdo de um arquivo
@@ -187,7 +188,7 @@ def lexer(source_code, operators, reserved_words, symbols):
 
        # Identificação de números
         # Caso inicie com um dígito ou com o prefixo "0x" indicando um número hexadecimal
-        if ( (char == '-' and index + 1 < len(source_code) and source_code[index + 1].isdigit()) or char.isdigit() or (char == '0' and index + 1 < len(source_code) and source_code[index + 1].lower() == 'x')):
+        if char.isdigit() or (char == '0' and index + 1 < len(source_code) and source_code[index + 1].lower() == 'x'):
             start_index = index  # Marca o início do número
             lexeme = ""  # Inicializa a string para acumular o lexema do número
 
@@ -223,7 +224,6 @@ def lexer(source_code, operators, reserved_words, symbols):
                 continue
 
             # Octal
-            
             elif char == '0' and index + 1 < len(source_code) and source_code[index + 1] in "01234567":
                 lexeme += "0"
                 index += 1
@@ -244,26 +244,11 @@ def lexer(source_code, operators, reserved_words, symbols):
                     print(f"Erro: Caractere inválido '{source_code[index]}' em número octal na linha {line_number}, coluna {column_number}")
                     sys.exit(1)
                 continue
-            
+
             # Float e Decimal (com verificação de `..`)
             else:
-                if ((char == '-' and index + 1 < len(source_code) and source_code[index + 1].isdigit()) or (index < len(source_code) and char.isdigit())):
-                    lexeme += char
-                    index += 1
-
-                # Loop para acumular dígitos e ponto decimal para identificar um float ou int
-                has_decimal_point = False
-                
-                while index < len(source_code) and (source_code[index].isdigit() or source_code[index] == '.') :
-                    if source_code[index] == '.':
-                        if has_decimal_point:
-                            print(f"Erro: Número inválido com múltiplos pontos decimais '{lexeme}' na linha {line_number}, coluna {column_number}")
-                            sys.exit(1)
-                        has_decimal_point = True
-                    lexeme += source_code[index]
-                    index += 1
-                is_scientific = False
-                  
+                has_decimal_point = False  
+                is_scientific = False  
                 
                 while index < len(source_code) and (source_code[index].isdigit() or source_code[index] in '.eE+-'):
                     if source_code[index] == '.':
@@ -284,34 +269,11 @@ def lexer(source_code, operators, reserved_words, symbols):
                     verificar_notacao_cientifica(lexeme)
                     tokens.append(Token("SCIENTIFIC_FLOAT", lexeme, line_number, column_number))
                 elif '.' in lexeme:
-                    token_type = "FLOAT" 
+                    tokens.append(Token("FLOAT", lexeme, line_number, column_number))
                 else:
                     verificar_overflow(lexeme)
-                    token_type = "INT"
+                    tokens.append(Token("DECIMAL_INT", lexeme, line_number, column_number))
                 
-                # Verifica se existe um "-" após o número e o trata como SUB em vez de negativo
-                if index < len(source_code) and source_code[index] == '-' and source_code[index + 1].isdigit():
-                    # Adiciona o primeiro número como token
-                    tokens.append(Token(token_type, lexeme, line_number, column_number))
-                    column_number += len(lexeme)
-                    
-                    # Adiciona "-" como token de subtração separado
-                    tokens.append(Token("SUB", '-', line_number, column_number))
-                    column_number += 1
-                    
-                    # Processa o próximo número (float) após "-"
-                    index += 1  # Move o índice após o "-"
-                    lexeme = ""  # Reinicia o lexema para o próximo número
-                    while index < len(source_code) and (source_code[index].isdigit() or source_code[index] == '.'):
-                        lexeme += source_code[index]
-                        index += 1
-                    
-                    tokens.append(Token("FLOAT", lexeme, line_number, column_number))
-                    column_number += len(lexeme)
-                else:
-                    # Se não houver "-", adiciona como token único
-                    tokens.append(Token(token_type, lexeme, line_number, column_number))
-                                    
                 column_number += len(lexeme)
                 continue
 
