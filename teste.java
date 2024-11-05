@@ -1,7 +1,7 @@
 int main(){
     int a ,b;
     float f,d,g,h,i,j,h,l,m;
-    f = -3.14;
+    f = 10-3.14;
     d = 1.23e4; //notação valido
     //g = 1.23e4.5;// notação invalido
     //h = 2147483648; //overflow

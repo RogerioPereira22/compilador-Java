@@ -185,10 +185,12 @@ def lexer(source_code, operators, reserved_words, symbols):
                     sys.exit(1)
                  continue
 
-
+        # Identificação de operadores e símbolos
+            
        # Identificação de números
+       
         # Caso inicie com um dígito ou com o prefixo "0x" indicando um número hexadecimal
-        if char.isdigit() or (char == '0' and index + 1 < len(source_code) and source_code[index + 1].lower() == 'x'):
+        if  char.isdigit() or (char == '0' and index + 1 < len(source_code) and source_code[index + 1].lower() == 'x'):
             start_index = index  # Marca o início do número
             lexeme = ""  # Inicializa a string para acumular o lexema do número
 
@@ -263,7 +265,11 @@ def lexer(source_code, operators, reserved_words, symbols):
                         is_scientific = True
                     lexeme += source_code[index]
                     index += 1
-
+                    
+                # Adiciona '0' após o ponto se necessário, conforme especificação
+                if lexeme.endswith('.'):
+                    lexeme += '0'
+                
                 # Validação e classificação do número
                 if is_scientific:
                     verificar_notacao_cientifica(lexeme)
