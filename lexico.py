@@ -77,38 +77,38 @@ class Token:
         # Retorna uma representação em string do token para facilitar a leitura
         return f"Token({self.type}, '{self.lexeme}', Line: {self.line}, Column: {self.column})"
 
-def verificar_notacao_cientifica(numero):
+def verificar_notacao_cientifica(numero,line,columm):
     """Verifica se o número está em notação científica válida."""
     if 'e' in numero or 'E' in numero:
         partes = numero.split('e' if 'e' in numero else 'E')
         if len(partes) != 2:
-            print(f"Erro: Notação científica incorreta '{numero}'")
+            print(f"Erro: Notação científica incorreta '{numero}' na linha{line} ,coluna{columm}")
             sys.exit(1)
         
         base, expoente = partes[0], partes[1]
         
         if not base.replace('.', '', 1).isdigit() or base.count('.') > 1:
-            print(f"Erro: Base inválida na notação científica '{numero}'")
+            print(f"Erro: Base inválida na notação científica '{numero}' na linha{line}, coluna{columm}")
             sys.exit(1)
 
         if expoente[0] in '+-' and expoente[1:].isdigit() or expoente.isdigit():
             return True
         else:
-            print(f"Erro: Expoente inválido na notação científica '{numero}'")
+            print(f"Erro: Expoente inválido na notação científica '{numero}'na linha {line} ,coluna {columm}")
             sys.exit(1)
     else:
         return numero.replace('.', '', 1).isdigit()
 
-def verificar_overflow(numero):
+def verificar_overflow(numero,line, columm):
     """Verifica se o número inteiro está dentro do limite de um int32."""
     try:
         valor = int(float(numero))  # Converte para float, depois para int, em caso de ponto flutuante
         if valor < -2_147_483_648 or valor > 2_147_483_647:
-            print(f"Erro: Overflow do número '{numero}'")
+            print(f"Erro: Overflow do número '{numero}' na linha:{line},coluna: {columm}")
             sys.exit(1)
         return True
     except ValueError:
-        print(f"Erro: Número inválido '{numero}'")
+        print(f"Erro: Número inválido '{numero}' na linha: {line},coluna: {columm}")
         sys.exit(1)
 # Função principal do analisador léxico
 def lexer(source_code, operators, reserved_words, symbols):
@@ -174,15 +174,15 @@ def lexer(source_code, operators, reserved_words, symbols):
                     while index < len(source_code) - 1 and not (source_code[index] == '*' and source_code[index + 1] == '/'):
                         index += 1
                     index += 2  # Avança após o fechamento '*/'
-
-                    # Extrai o lexema e adiciona um token do tipo COMMENT
-                    lexeme = source_code[start_index:index]
-                    tokens.append(Token("COMMENT", lexeme, line_number, column_number))
-                    column_number += len(lexeme)  # Atualiza a coluna
-                 else:
-                    # Erro se o comentário não estiver fechado
-                    print(f"Erro: Comentário não fechado na linha {line_number}, coluna {column_number}")
-                    sys.exit(1)
+                    if index < len(source_code):
+                        # Extrai o lexema e adiciona um token do tipo COMMENT
+                        lexeme = source_code[start_index:index]
+                        tokens.append(Token("COMMENT", lexeme, line_number, column_number))
+                        column_number += len(lexeme)  # Atualiza a coluna
+                    else:
+                        # Erro se o comentário não estiver fechado
+                        print(f"Erro: Comentário não fechado na linha {line_number}, coluna {column_number}")
+                        sys.exit(1)
                  continue
 
         # Identificação de operadores e símbolos
@@ -272,12 +272,12 @@ def lexer(source_code, operators, reserved_words, symbols):
                 
                 # Validação e classificação do número
                 if is_scientific:
-                    verificar_notacao_cientifica(lexeme)
+                    verificar_notacao_cientifica(lexeme,line_number,column_number)
                     tokens.append(Token("SCIENTIFIC_FLOAT", lexeme, line_number, column_number))
                 elif '.' in lexeme:
                     tokens.append(Token("FLOAT", lexeme, line_number, column_number))
                 else:
-                    verificar_overflow(lexeme)
+                    verificar_overflow(lexeme,line_number,column_number)
                     tokens.append(Token("DECIMAL_INT", lexeme, line_number, column_number))
                 
                 column_number += len(lexeme)

@@ -5,7 +5,6 @@ int main(){
     d = 1.23e4; //notação valido
     //g = 1.23e4.5;// notação invalido
     //h = 2147483648; //overflow
-    //i = -2147483649; //underflow
     j = 2147483647;
     h = 0x1A3F; //hexadecimal valido
     //l = 0x1H3; //hexadecimal invalido"
