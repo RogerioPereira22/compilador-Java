@@ -157,14 +157,13 @@ def lexer(source_code, operators, reserved_words, symbols):
                 
                  if index < len(source_code) and source_code[index] == '/':
                     index += 1  # Avança após o '/'
-                    # Continua até encontrar o fechamento do comentário
-                    while index < len(source_code) - 1 and not (source_code[index +2] == "\n"):
+                    # Continua até encontrar o final da linha
+                    while index < len(source_code)-1 and not (source_code[index] == "\n"):
                         index += 1
-                    index += 2  # Avança após o fechamento '*/'
-
+                    index += 2  # Avança após o fechamento '/n'
                     # Extrai o lexema e adiciona um token do tipo COMMENT
                     lexeme = source_code[start_index:index]
-                    tokens.append(Token("COMMENT", lexeme, line_number, column_number))
+                    #tokens.append(Token("COMMENT", lexeme, line_number, column_number))
                     column_number += len(lexeme)  # Atualiza a coluna
                     
                 # Verifica se é um comentário de bloco
@@ -200,7 +199,7 @@ def lexer(source_code, operators, reserved_words, symbols):
                 index += 2  # Avança o índice após "0x"
                 
                 # Loop para acumular os dígitos e letras válidas em hexadecimal (0-9 e a-f)
-                while index < len(source_code) and (source_code[index].isdigit() or source_code[index] in "ABCDEFG") and not(source_code[index] in "-+={}(),!@#$%¨&*:;/<>|"):
+                while index < len(source_code) and (source_code[index].isdigit() or source_code[index] in "ABCDEFG.") and not(source_code[index] in "-+={}(),!@#$%¨&*:;/<>|"):
                     if source_code[index] == '.':
                         # Erro: ponto decimal encontrado em hexadecimal
                         print(f"Erro: Ponto decimal não permitido em número hexadecimal '{lexeme + source_code[index]}' na linha {line_number}, coluna {column_number}")
@@ -231,7 +230,7 @@ def lexer(source_code, operators, reserved_words, symbols):
                 index += 1
                 
                 # Loop para acumular os dígitos válidos em octal (0-7)
-                while index < len(source_code) and source_code[index] in "01234567" and not(source_code[index] in "-+={}(),!@#$%¨&*:;/<>|"):
+                while index < len(source_code) and source_code[index] in "01234567." and not(source_code[index] in "-+={}(),!@#$%¨&*:;/<>|"):
                     if source_code[index] == '.':
                         # Erro: ponto decimal encontrado em octal
                         print(f"Erro: Ponto decimal não permitido em número octal '{lexeme + source_code[index]}' na linha {line_number}, coluna {column_number}")
@@ -250,22 +249,25 @@ def lexer(source_code, operators, reserved_words, symbols):
             # Float e Decimal (com verificação de `..`)
             else:
                 has_decimal_point = False  
-                is_scientific = False  
-                
-                while index < len(source_code) and (source_code[index].isdigit() or source_code[index] in '.eE+-') and not(source_code[index] in "-+={}(),!@#$%¨&*:;/<>|"):
-                    if source_code[index] == '.':
-                        if has_decimal_point:
-                            print(f"Erro: Número inválido com múltiplos pontos decimais '{lexeme}' na linha {line_number}, coluna {column_number}")
-                            sys.exit(1)
-                        has_decimal_point = True
-                    elif source_code[index] in 'eE':
+                is_scientific = False
+                # Loop para acumular os dígitos e ponto decimal
+                while index < len(source_code)and (source_code[index].isdigit() or source_code[index] in '.eE+-') and not(source_code[index] in "-+={}(),!@#$%¨&*:;/<>|") :
+                    """if source_code[index] == '.':
+                    if has_decimal_point:
+                        print(f"Erro: Número inválido com múltiplos pontos decimais '{lexeme}' na linha {line_number}, coluna {column_number}")
+                        sys.exit(1)
+                    has_decimal_point = True"""
+                    if source_code[index] in 'eE':
                         if is_scientific:
                             print(f"Erro: Notação científica inválida '{lexeme}' na linha {line_number}, coluna {column_number}")
                             sys.exit(1)
                         is_scientific = True
                     lexeme += source_code[index]
                     index += 1
-                    
+                # Verifica se o número termina com um caractere inválido    
+                if lexeme.count('.') > 1:
+                     print(f"Erro: Número inválido com múltiplos pontos decimais '{lexeme}' na linha {line_number}, coluna {column_number}")
+                     sys.exit(1)    
                 # Adiciona '0' após o ponto se necessário, conforme especificação
                 if lexeme.endswith('.'):
                     lexeme += '0'
@@ -284,7 +286,7 @@ def lexer(source_code, operators, reserved_words, symbols):
                 continue
 
         # Identificação de identificadores e palavras reservadas
-        if char.isalpha() or char == '_':
+        if char.isalpha():
             start_index = index  # Marca o início do identificador
             # Continua enquanto os caracteres formarem um identificador válido
             while index < len(source_code) and (source_code[index].isalnum() or source_code[index] == '_'):
