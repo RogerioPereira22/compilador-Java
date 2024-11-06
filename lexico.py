@@ -187,7 +187,7 @@ def lexer(source_code, operators, reserved_words, symbols):
 
         # Identificação de operadores e símbolos
             
-       # Identificação de números
+        # Identificação de números
        
         # Caso inicie com um dígito ou com o prefixo "0x" indicando um número hexadecimal
         if  char.isdigit() or (char == '0' and index + 1 < len(source_code) and source_code[index + 1].lower() == 'x'):
@@ -200,7 +200,7 @@ def lexer(source_code, operators, reserved_words, symbols):
                 index += 2  # Avança o índice após "0x"
                 
                 # Loop para acumular os dígitos e letras válidas em hexadecimal (0-9 e a-f)
-                while index < len(source_code) and (source_code[index].isdigit() or source_code[index] in "ABCDEFG"):
+                while index < len(source_code) and (source_code[index].isdigit() or source_code[index] in "ABCDEFG") and not(source_code[index] in "-+={}(),!@#$%¨&*:;/<>|"):
                     if source_code[index] == '.':
                         # Erro: ponto decimal encontrado em hexadecimal
                         print(f"Erro: Ponto decimal não permitido em número hexadecimal '{lexeme + source_code[index]}' na linha {line_number}, coluna {column_number}")
@@ -231,7 +231,7 @@ def lexer(source_code, operators, reserved_words, symbols):
                 index += 1
                 
                 # Loop para acumular os dígitos válidos em octal (0-7)
-                while index < len(source_code) and source_code[index] in "01234567":
+                while index < len(source_code) and source_code[index] in "01234567" and not(source_code[index] in "-+={}(),!@#$%¨&*:;/<>|"):
                     if source_code[index] == '.':
                         # Erro: ponto decimal encontrado em octal
                         print(f"Erro: Ponto decimal não permitido em número octal '{lexeme + source_code[index]}' na linha {line_number}, coluna {column_number}")
@@ -252,7 +252,7 @@ def lexer(source_code, operators, reserved_words, symbols):
                 has_decimal_point = False  
                 is_scientific = False  
                 
-                while index < len(source_code) and (source_code[index].isdigit() or source_code[index] in '.eE+-'):
+                while index < len(source_code) and (source_code[index].isdigit() or source_code[index] in '.eE+-') and not(source_code[index] in "-+={}(),!@#$%¨&*:;/<>|"):
                     if source_code[index] == '.':
                         if has_decimal_point:
                             print(f"Erro: Número inválido com múltiplos pontos decimais '{lexeme}' na linha {line_number}, coluna {column_number}")
