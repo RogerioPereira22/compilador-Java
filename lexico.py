@@ -141,6 +141,15 @@ def lexer(source_code, operators, reserved_words, symbols):
                     index += 1
                 if index < len(source_code):
                     # Extrai o lexema e adiciona um token do tipo STRING
+                    lexeme = ""
+                    if source_code[index] == '\\' and index + 1 < len(source_code) and (source_code[index + 1] == 'n'):
+                        lexeme += '\n'
+                        index += 1  # Skip the 'n' character
+                    elif source_code[index] == '\\' and index + 1 < len(source_code) and (source_code[index + 1] == 't'):
+                        lexeme += '\t'
+                        index += 1  # Skip the 'n' character    
+                    else:
+                        lexeme += source_code[index]
                     lexeme = source_code[start_index:index + 1]
                     tokens.append(Token("STRING", lexeme, line_number, column_number))  # Adiciona o token à lista
                     column_number += len(lexeme)  # Atualiza a coluna
@@ -176,7 +185,7 @@ def lexer(source_code, operators, reserved_words, symbols):
                     if index < len(source_code):
                         # Extrai o lexema e adiciona um token do tipo COMMENT
                         lexeme = source_code[start_index:index]
-                        tokens.append(Token("COMMENT", lexeme, line_number, column_number))
+                        #tokens.append(Token("COMMENT", lexeme, line_number, column_number))
                         column_number += len(lexeme)  # Atualiza a coluna
                     else:
                         # Erro se o comentário não estiver fechado

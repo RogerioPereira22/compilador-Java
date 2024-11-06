@@ -16,7 +16,11 @@ int main(){
     
     //m = 0758;//octal invalido
     /*programa teste em java*/
-    system.out.print("algo \n", 7.8444,b);
+    system.out.print("  \t algo \n
+    ", 7.8444,b);
+
+
+
     system.in.scan(int, a);
     while (a <= 10){
         if( b > a){
