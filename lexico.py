@@ -333,7 +333,7 @@ def lexer(source_code, operators, reserved_words, symbols):
 # Função principal que executa o analisador léxico
 def main(nome_arquivo):
     nome_arquivo_tokens = 'tokens.txt'  # Nome do arquivo com os tokens
-    
+    lista_lexica = []
     try:
         # Lê o conteúdo do arquivo de código-fonte
         arquivo = ler_arquivo(nome_arquivo)
@@ -343,17 +343,19 @@ def main(nome_arquivo):
         tokens_encontrados = lexer(arquivo, operators, reserved_words, symbols)
         # Exibe cada token encontrado
         for token in tokens_encontrados:
-            print(token)
-            #print("testando!")
+             lista_lexica.append(token)
+           
     except Exception as e:
         # Exibe erro genérico e interrompe a execução em caso de erro inesperado
         print(f"Erro inesperado: {e}")
         sys.exit(1)
+    return lista_lexica    
 
 # Executa o script se o arquivo for passado como argumento
 if __name__ == "__main__":
     if len(sys.argv) > 1:
-        main(sys.argv[1])
+        lista = main(sys.argv[1])
+        print(lista)
     else:
         
         # Exibe uma mensagem se nenhum argumento foi passado
