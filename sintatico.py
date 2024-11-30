@@ -277,7 +277,7 @@ class Parser:
 
     def parse_expr(self):
         """<expr> -> <or>"""
-        print(f"Parsing expression. Current token: {self.current_token}")
+        #print(f"Parsing expression. Current token: {self.current_token}")
         or_node = self.parse_or()  # Analisa a expressão lógica 'or'
         if or_node is None:
             print("Expression parsing failed.")
@@ -289,7 +289,7 @@ class Parser:
 
     def parse_or(self):
         """<or> -> <and> <restoOr>"""
-        print(f"Parsing OR. Current token: {self.current_token}")
+        #print(f"Parsing OR. Current token: {self.current_token}")
         left_node = self.parse_and()  # Analisa o lado esquerdo
         while self.current_token and self.current_token.type == 'LOGICAL_OR':
             operator_token = self.current_token
@@ -301,7 +301,7 @@ class Parser:
 
     def parse_and(self):
         """<and> -> <not> <restoAnd>"""
-        print(f"Parsing AND. Current token: {self.current_token}")
+        #print(f"Parsing AND. Current token: {self.current_token}")
         left_node = self.parse_not()  # Analisa o lado esquerdo
         while self.current_token and self.current_token.type == 'LOGICAL_AND':
             operator_token = self.current_token
@@ -313,7 +313,7 @@ class Parser:
 
     def parse_not(self):
         """<not> -> '!' <not> | <rel>"""
-        print(f"Parsing NOT. Current token: {self.current_token}")
+        #print(f"Parsing NOT. Current token: {self.current_token}")
         if self.current_token and self.current_token.type == 'LOGICAL_NOT':
             operator_token = self.current_token
             self.next_token()  # Consome o operador '!'
@@ -325,7 +325,7 @@ class Parser:
 
     def parse_rel(self):
         """<rel> -> <add> <restoRel>"""
-        print(f"Parsing REL. Current token: {self.current_token}")
+        #print(f"Parsing REL. Current token: {self.current_token}")
         left_node = self.parse_add()  # Analisa o lado esquerdo
         if self.current_token and self.current_token.type in ['EQUAL', 'NOT_EQUAL', 'LESS', 'LESS_EQUAL', 'GREATER', 'GREATER_EQUAL']:
             operator_token = self.current_token
@@ -337,7 +337,7 @@ class Parser:
 
     def parse_add(self):
         """<add> -> <mult> (<ADD | SUB> <mult>)*"""
-        print(f"Parsing ADD. Current token: {self.current_token}")
+        #print(f"Parsing ADD. Current token: {self.current_token}")
         left_node = self.parse_mult()  # Analisa o lado esquerdo (multiplicação)
         
         # Enquanto houver operadores de adição ou subtração, continue processando
@@ -348,13 +348,13 @@ class Parser:
             
             # Cria um nó binário para o operador
             left_node = Node("binary_op", [left_node, right_node], operator_token.lexeme)
-            print(f"Created binary_op node with operator {operator_token.lexeme}")
+            #print(f"Created binary_op node with operator {operator_token.lexeme}")
         
         return left_node  # Retorna o nó completo
 
     def parse_mult(self):
         """<mult> -> <uno> <restoMult>"""
-        print(f"Parsing MULT. Current token: {self.current_token}")
+        #print(f"Parsing MULT. Current token: {self.current_token}")
         left_node = self.parse_uno()  # Analisa o lado esquerdo
         while self.current_token and self.current_token.type in ['MUL', 'DIV', 'MOD']:
             operator_token = self.current_token
@@ -367,7 +367,7 @@ class Parser:
         
     def parse_uno(self):
         """<uno> -> '+' <uno> | '-' <uno> | <factor>"""
-        print(f"Parsing UNO. Current token: {self.current_token}")
+        #print(f"Parsing UNO. Current token: {self.current_token}")
         if self.current_token and self.current_token.type in ['ADD', 'SUB']:
             operator_token = self.current_token
             self.next_token()  # Consome o operador
@@ -379,7 +379,7 @@ class Parser:
             
     def parse_factor(self):
         """<factor> -> '(' <expr> ')' | 'IDENT' | 'NUMdec' | 'NUMfloat' | 'NUMoct' | 'NUMhex' | 'STRING'"""
-        print(f"Parsing factor. Current token: {self.current_token}")
+        #print(f"Parsing factor. Current token: {self.current_token}")
         if self.current_token.type == 'OPEN_PAREN':
             self.next_token()
             expr_node = self.parse_expr()  # Analisa a expressão dentro dos parênteses
@@ -391,7 +391,7 @@ class Parser:
             # Se for um literal, crie um nó e avance
             literal_node = Node("literal", value=self.current_token.lexeme)
             self.next_token()  # Consome o literal
-            print(f"Literal node created: {literal_node}")
+            #print(f"Literal node created: {literal_node}")
             return literal_node
         elif self.current_token.type == 'VARIABLE':
             # Se for uma variável, crie um nó e avance
