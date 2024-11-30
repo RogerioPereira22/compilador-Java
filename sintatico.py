@@ -10,13 +10,18 @@ class Node:
         return self._str_recursive(0)
 
     def _str_recursive(self, level):
+        # Cria uma string com a indentação apropriada e o tipo e valor do nó
         ret = "\t" * level + f"{self.node_type}: {self.value if self.value else ''}\n"
+        # Itera sobre os filhos do nó
         for child in self.children:
             if isinstance(child, Node):
+                # Se o filho for um Node, chama recursivamente _str_recursive
                 ret += child._str_recursive(level + 1)
             elif isinstance(child, Token):
-                ret += "\t" * (level + 1) + f"Token({child.type}, {child.lexeme})\n"  # Exibe o token diretamente
+                # Se o filho for um Token, exibe o token diretamente
+                ret += "\t" * (level + 1) + f"Token({child.type}, {child.lexeme})\n"
             else:
+                # Se o filho for um objeto inesperado, exibe uma mensagem de erro
                 ret += "\t" * (level + 1) + f"Erro: Objeto inesperado {child}\n"
         return ret
 
