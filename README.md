@@ -8,7 +8,7 @@ Este projeto é um analisador léxico e sintático em Python que processa o cód
 - **Identificação de Tokens**: Reconhece palavras reservadas, operadores, variáveis, números (inteiros e flutuantes), strings e símbolos.
 - **Tratamento de Erros Léxicos**: Identifica e exibe mensagens de erro para strings não fechadas, números com caracteres inválidos e tokens desconhecidos.
 - **Exibição dos Tokens**: Cada token identificado é exibido com informações detalhadas sobre sua posição no código-fonte.
-- **Geração e Exibição da Árvore Sintática**: Analisador sintático que gera e exibe uma árvore sintática para o código-fonte, com base na gramática JavaMM definida no arquivo `sintatico.py`.
+- **Geração e Exibição da Árvore Sintática**: Analisador sintático que gera e exibe uma árvore sintática para o código-fonte, com base na gramática `JavaMM.gmr` definida no arquivo `sintatico.py`.
 
 ## Estrutura do Projeto
 
