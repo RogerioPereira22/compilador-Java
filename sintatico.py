@@ -1,18 +1,27 @@
 from lexico import Token  # Importa a classe Token do módulo lexico
 
-# Classe que representa um nó na árvore de sintaxe
 class Node:
     def __init__(self, node_type, children=None, value=None):
         self.node_type = node_type  # Tipo do nó, como "function", "block", etc.
         self.children = children if children is not None else []  # Filhos do nó na árvore
         self.value = value  # Valor associado ao nó, se houver (ex.: nome de uma variável)
 
-    def __str__(self, level=0):
-        # Método para imprimir a árvore de forma hierárquica
+    def __str__(self):
+        return self._str_recursive(0)
+
+    def _str_recursive(self, level):
         ret = "\t" * level + f"{self.node_type}: {self.value if self.value else ''}\n"
         for child in self.children:
-            ret += child.__str__(level + 1)  # Imprime os filhos com um nível de indentação maior
+            if isinstance(child, Node):
+                ret += child._str_recursive(level + 1)
+            elif isinstance(child, Token):
+                ret += "\t" * (level + 1) + f"Token({child.type}, {child.lexeme})\n"  # Exibe o token diretamente
+            else:
+                ret += "\t" * (level + 1) + f"Erro: Objeto inesperado {child}\n"
         return ret
+
+
+
 
 # Classe do Parser (analisador sintático)
 class Parser:
@@ -72,7 +81,11 @@ class Parser:
         """<stmtList> -> <stmt> <stmtList> | &"""
         stmt_list = []  # Lista para armazenar instruções
         while self.current_token and self.current_token.type != 'CLOSE_BRACE':
-            stmt_list.append(self.parse_stmt())  # Analisa cada instrução e adiciona à lista
+            stmt = self.parse_stmt()  # Analisa cada instrução
+            if stmt is not None:  # Apenas adicione nós válidos
+                stmt_list.append(stmt)
+        if not stmt_list:
+            return Node("empty")  # Produção vazia
         return Node("stmtList", stmt_list)  # Retorna o nó da lista de instruções
 
     def parse_stmt(self):
@@ -84,6 +97,8 @@ class Parser:
         if self.current_token.type == 'VARIABLE':
             var_node = Node("variable", value=self.current_token.lexeme)
             expr_node = self.parse_atrib()  # Analisa a expressão à direita do '='
+            if not expr_node:
+                raise SyntaxError("Erro ao analisar expressão na atribuição.")
             self.match('SEMICOLON')  # Verifica e consome o ponto e vírgula
             return Node("assign_stmt", [var_node, expr_node])  # Retorna o nó de atribuição
         elif self.current_token.type == 'OPEN_BRACE':
@@ -100,13 +115,15 @@ class Parser:
             self.match('SEMICOLON')  # Verifica e consome o ponto e vírgula
             return Node("control", value=value)  # Retorna o nó de controle (break/continue)
         elif self.current_token.type == 'IDENTIFIER' and self.current_token.lexeme == 'system':
-            self.parse_io_stmt()  # Analisa uma instrução de I/O
+            io_node = self.parse_io_stmt()  # Analisa uma instrução de I/O
+            if not io_node:
+                raise SyntaxError("Erro ao analisar instrução de I/O.")
+            return io_node
         elif self.current_token.type == 'SEMICOLON':
             self.next_token()  # Consome o ponto e vírgula
             return Node("empty_stmt")  # Retorna um nó de instrução vazia
         else:
             raise SyntaxError(f"Instrução inválida: {self.current_token}")
-
 
     def parse_declaration(self):
         """<declaration> -> <type> <identList> ';'"""
@@ -163,7 +180,9 @@ class Parser:
     def parse_opt_atrib(self):
         """<optAtrib> -> <atrib> | &"""
         if self.current_token and self.current_token.type == 'VARIABLE':
-            self.parse_atrib()  # Analisa a atribuição, se houver
+            return self.parse_atrib()  # Retorna o nó de atribuição, se houver
+        return Node("empty")  # Produção vazia
+
 
     def parse_opt_expr(self):
         """<optExpr> -> <expr> | &"""
@@ -171,47 +190,49 @@ class Parser:
             self.parse_expr()  # Analisa a expressão, se houver
 
     def parse_io_stmt(self):
-        """<ioStmt> -> 'system' '.' 'out' '.' 'print' '(' <type> ',' 'IDENT' ')' ';' | 'system' '.' 'in' '.' 'scan' '(' <outList> ')' ';'"""
+        """<ioStmt> -> 'system' '.' 'out' '.' 'print' '(' <outList> ')' ';' | 'system' '.' 'in' '.' 'scan' '(' <outList> ')' ';'"""
         if self.current_token.lexeme == 'system':
             self.match('IDENTIFIER')  # 'system'
             self.match('DOT')
-        if self.current_token.lexeme == 'out':
-            self.next_token()
-            self.match('DOT')
-            self.match('IDENTIFIER')  # 'print'
-            self.match('OPEN_PAREN')
-            self.parse_type()
-            self.match('COMMA')
-            self.parse_out_list()
-            self.match('CLOSE_PAREN')
-            self.match('SEMICOLON')
-        elif self.current_token.lexeme == 'in':
-            self.next_token()
-            self.match('DOT')
-            self.match('IDENTIFIER')  # 'scan'
-            self.match('OPEN_PAREN')
-            self.parse_out_list()
-            self.match('CLOSE_PAREN')
-            self.match('SEMICOLON')
+            if self.current_token.lexeme == 'out':
+                self.match('IDENTIFIER')  # 'out'
+                self.match('DOT')
+                self.match('IDENTIFIER')  # 'print'
+                self.match('OPEN_PAREN')
+                out_list = self.parse_out_list()  # Analisa os argumentos de saída
+                self.match('CLOSE_PAREN')
+                self.match('SEMICOLON')
+                return Node("io_stmt", [Node("output", out_list)])  # Retorna o nó de saída
+            elif self.current_token.lexeme == 'in':
+                self.match('IDENTIFIER')  # 'in'
+                self.match('DOT')
+                self.match('IDENTIFIER')  # 'scan'
+                self.match('OPEN_PAREN')
+                in_list = self.parse_out_list()  # Analisa os argumentos de entrada
+                self.match('CLOSE_PAREN')
+                self.match('SEMICOLON')
+                return Node("io_stmt", [Node("input", in_list)])  # Retorna o nó de entrada
+        raise SyntaxError(f"Instrução de I/O inválida: {self.current_token}")
+
+
 
     def parse_out_list(self):
         """<outList> -> <out> <restoOutList>"""
-        self.parse_out()  # Analisa a primeira saída
+        out_list = [self.parse_out()]  # Analisa a primeira saída
         while self.current_token and self.current_token.type == 'COMMA':
-            self.next_token()  # Consome a vírgula
-            self.parse_out()  # Analisa a próxima saída
+            self.match('COMMA')  # Consome a vírgula
+            out_list.append(self.parse_out())  # Analisa a próxima saída
+        return out_list
+
 
     def parse_out(self):
-
         """<out> -> 'STR' | 'IDENT' | 'NUMdec' | 'NUMfloat' | 'NUMoct' | 'NUMhex'"""
-        if self.current_token.type in ['STRING','IDENTIFIER', 'VARIABLE', 'SCIENTIFIC_FLOAT', 'FLOAT', 'DECIMAL_INT', 'HEXADECIMAL_INT', 'OCTAL_INT']:
+        if self.current_token.type in ['STRING', 'IDENTIFIER', 'VARIABLE', 'SCIENTIFIC_FLOAT', 'FLOAT', 'DECIMAL_INT', 'HEXADECIMAL_INT', 'OCTAL_INT']:
+            node = Node("out", value=self.current_token.lexeme)
             self.next_token()  # Consome o token
+            return node
         else:
-            print("entrei no else do parse_out")
-            print(self.current_token.type)
-            print(self.current_token.lexeme)
-            print(self.current_token)
-            raise SyntaxError("Saída inválida")
+            raise SyntaxError(f"Saída inválida: esperado STRING, IDENTIFIER ou número, mas encontrado {self.current_token}")
 
     def parse_while_stmt(self):
         """<whileStmt> -> 'while' '(' <expr> ')' <stmt>"""
@@ -222,7 +243,7 @@ class Parser:
         self.parse_stmt()  # Analisa a instrução no corpo do loop
 
     def parse_if_stmt(self):
-        print("entrei no if stmt")
+        #print("entrei no if stmt")
         """<ifStmt> -> 'if' '(' <expr> ')' <stmt> <elsePart>"""
         self.match('IDENTIFIER')  # 'if'
         self.match('OPEN_PAREN')
@@ -234,134 +255,189 @@ class Parser:
             self.parse_stmt()  # Analisa a instrução no corpo do else
 
     def parse_atrib(self):
+        
         """<atrib> -> 'IDENT' '=' <expr>"""
-        print("entrei no atrib")
-        print(self.current_token.type)
         if self.current_token.type == 'VARIABLE':
-            print("entrei no if abrib")
             var_node = Node("variable", value=self.current_token.lexeme)
             self.next_token()  # Consome o identificador
             if self.current_token.type in ['ASSIGN', 'ADD_ASSIGN', 'SUB_ASSIGN', 'MUL_ASSIGN', 'DIV_ASSIGN', 'MOD_ASSIGN']:
-                operator_token = self.current_token
+                assign_node = Node("assign_operator", value=self.current_token.lexeme)
                 self.next_token()  # Consome o operador de atribuição
                 expr_node = self.parse_expr()  # Analisa a expressão à direita do '='
-                return Node("assign_stmt", [var_node, operator_token, expr_node])
+                if expr_node is None:
+                    raise SyntaxError("Erro na análise da expressão à direita do operador de atribuição.")
+                return Node("assign_stmt", [var_node, assign_node, expr_node])  # Retorna o nó completo
             else:
-                raise SyntaxError("Operador de atribuição esperado")
+                raise SyntaxError(f"Operador de atribuição esperado, mas encontrado {self.current_token}")
+        else:
+            raise SyntaxError(f"Variável esperada, mas encontrada {self.current_token}")
+
+
+
 
     def parse_expr(self):
         """<expr> -> <or>"""
-        print("entrei no expr")
-        self.parse_or()  # Analisa a expressão lógica 'or'
+        print(f"Parsing expression. Current token: {self.current_token}")
+        or_node = self.parse_or()  # Analisa a expressão lógica 'or'
+        if or_node is None:
+            print("Expression parsing failed.")
+            raise SyntaxError("Expressão inválida encontrada.")
+        return or_node  # Retorna o nó da expressão
+
+
         
 
     def parse_or(self):
         """<or> -> <and> <restoOr>"""
-        print("entrei no or")
-        left_node = self.parse_and()
+        print(f"Parsing OR. Current token: {self.current_token}")
+        left_node = self.parse_and()  # Analisa o lado esquerdo
         while self.current_token and self.current_token.type == 'LOGICAL_OR':
             operator_token = self.current_token
             self.next_token()
-            right_node = self.parse_and()
+            right_node = self.parse_and()  # Analisa o lado direito
             left_node = Node("binary_op", [left_node, right_node], operator_token.lexeme)
         return left_node
 
+
     def parse_and(self):
         """<and> -> <not> <restoAnd>"""
-        print("entrei no and")
-        self.parse_not()  # Analisa a expressão lógica 'not'
+        print(f"Parsing AND. Current token: {self.current_token}")
+        left_node = self.parse_not()  # Analisa o lado esquerdo
         while self.current_token and self.current_token.type == 'LOGICAL_AND':
-            self.next_token()  # Consome o operador 'and'
-            self.parse_not()  # Analisa a próxima expressão 'not'
+            operator_token = self.current_token
+            self.next_token()
+            right_node = self.parse_not()  # Analisa o lado direito
+            left_node = Node("binary_op", [left_node, right_node], operator_token.lexeme)
+        return left_node
+
 
     def parse_not(self):
         """<not> -> '!' <not> | <rel>"""
-        print("entrei no not")
+        print(f"Parsing NOT. Current token: {self.current_token}")
         if self.current_token and self.current_token.type == 'LOGICAL_NOT':
+            operator_token = self.current_token
             self.next_token()  # Consome o operador '!'
-            self.parse_not()  # Analisa a próxima expressão 'not'
+            not_node = self.parse_not()  # Analisa a próxima expressão
+            return Node("unary_op", [not_node], operator_token.lexeme)  # Nó unário
         else:
-            self.parse_rel()  # Analisa a expressão relacional
+            return self.parse_rel()  # Retorna o nó relacional
+
 
     def parse_rel(self):
         """<rel> -> <add> <restoRel>"""
-        print("entrei no rel")
-        self.parse_add()  # Analisa a expressão de adição
+        print(f"Parsing REL. Current token: {self.current_token}")
+        left_node = self.parse_add()  # Analisa o lado esquerdo
         if self.current_token and self.current_token.type in ['EQUAL', 'NOT_EQUAL', 'LESS', 'LESS_EQUAL', 'GREATER', 'GREATER_EQUAL']:
-            self.next_token()  # Consome o operador relacional
-            self.parse_add()  # Analisa a próxima expressão de adição
+            operator_token = self.current_token
+            self.next_token()  # Consome o operador
+            right_node = self.parse_add()  # Analisa o lado direito
+            return Node("binary_op", [left_node, right_node], operator_token.lexeme)  # Nó binário
+        return left_node  # Retorna o lado esquerdo se não houver operadores relacionais
+
 
     def parse_add(self):
-        """<add> -> <mult> <restoAdd>"""
-        print("entrei no add")
-        self.parse_mult()  # Analisa a expressão de multiplicação
+        """<add> -> <mult> (<ADD | SUB> <mult>)*"""
+        print(f"Parsing ADD. Current token: {self.current_token}")
+        left_node = self.parse_mult()  # Analisa o lado esquerdo (multiplicação)
+        
+        # Enquanto houver operadores de adição ou subtração, continue processando
         while self.current_token and self.current_token.type in ['ADD', 'SUB']:
-            self.next_token()  # Consome o operador '+' ou '-'
-            self.parse_mult()  # Analisa a próxima expressão de multiplicação
+            operator_token = self.current_token  # Captura o operador
+            self.next_token()  # Consome o operador
+            right_node = self.parse_mult()  # Analisa o lado direito (multiplicação)
+            
+            # Cria um nó binário para o operador
+            left_node = Node("binary_op", [left_node, right_node], operator_token.lexeme)
+            print(f"Created binary_op node with operator {operator_token.lexeme}")
+        
+        return left_node  # Retorna o nó completo
 
     def parse_mult(self):
         """<mult> -> <uno> <restoMult>"""
-        print("entrei no mult")
-        self.parse_uno()  # Analisa a expressão unária
+        print(f"Parsing MULT. Current token: {self.current_token}")
+        left_node = self.parse_uno()  # Analisa o lado esquerdo
         while self.current_token and self.current_token.type in ['MUL', 'DIV', 'MOD']:
-            self.next_token()  # Consome o operador '*', '/' ou '%'
-            self.parse_uno()  # Analisa a próxima expressão unária
+            operator_token = self.current_token
+            self.next_token()  # Consome o operador
+            right_node = self.parse_uno()  # Analisa o lado direito
+            left_node = Node("binary_op", [left_node, right_node], operator_token.lexeme)  # Nó binário
+        return left_node  # Retorna o nó completo
+
             
         
     def parse_uno(self):
-        """<uno> -> '+' <uno> | '-' <uno> | <fator>"""
-        print("entrei no uno")
+        """<uno> -> '+' <uno> | '-' <uno> | <factor>"""
+        print(f"Parsing UNO. Current token: {self.current_token}")
         if self.current_token and self.current_token.type in ['ADD', 'SUB']:
-            self.next_token()  # Consome o operador '+' ou '-'
-            self.parse_uno()  # Analisa a próxima expressão unária
+            operator_token = self.current_token
+            self.next_token()  # Consome o operador
+            uno_node = self.parse_uno()  # Analisa o próximo fator
+            return Node("unary_op", [uno_node], operator_token.lexeme)  # Nó unário
         else:
-            print("entrei else no uno")
-            self.parse_factor()  # Analisa o fator
+            return self.parse_factor()  # Retorna o fator
+
             
     def parse_factor(self):
         """<factor> -> '(' <expr> ')' | 'IDENT' | 'NUMdec' | 'NUMfloat' | 'NUMoct' | 'NUMhex' | 'STRING'"""
-        print("entrei no factor")
-        print(self.current_token.type)
+        print(f"Parsing factor. Current token: {self.current_token}")
         if self.current_token.type == 'OPEN_PAREN':
             self.next_token()
-            expr_node = self.parse_expr()
+            expr_node = self.parse_expr()  # Analisa a expressão dentro dos parênteses
             if self.current_token.type != 'CLOSE_PAREN':
                 raise SyntaxError(f"Erro de sintaxe: Esperado ')' mas encontrado {self.current_token}")
             self.next_token()
             return expr_node
-        elif self.current_token.type in ['DECIMAL_INT', 'FLOAT', 'OCTAL_INT', 'HEXADECIMAL_INT', 'STRING','SCIENTIFIC_FLOAT']:
+        elif self.current_token.type in ['DECIMAL_INT', 'FLOAT', 'OCTAL_INT', 'HEXADECIMAL_INT', 'STRING', 'SCIENTIFIC_FLOAT']:
+            # Se for um literal, crie um nó e avance
             literal_node = Node("literal", value=self.current_token.lexeme)
             self.next_token()  # Consome o literal
-            print("literal_node",literal_node)  
+            print(f"Literal node created: {literal_node}")
             return literal_node
         elif self.current_token.type == 'VARIABLE':
-            print("entrei no variable")
+            # Se for uma variável, crie um nó e avance
             variable_node = Node("variable", value=self.current_token.lexeme)
             self.next_token()
             return variable_node
         else:
             raise SyntaxError(f"Erro de sintaxe: Token inesperado {self.current_token}")
+
+
+
     
 
 
 
 # Código principal para executar o parser
 if __name__ == "__main__":
+   
     import lexico, sys
 
     if len(sys.argv) > 1:
         try:
-            lista = lexico.main(sys.argv[1])  # Obtém a lista de tokens do módulo lexico
-            print("Lista de tokens recebida:", lista)  # Para verificar a saída do lexico
+            # Chame lexico.main com o nome do arquivo como argumento
+            tokens = lexico.main(sys.argv[1])  # Retorna a lista de tokens
 
-            if not lista or not isinstance(lista, list):
+            if not tokens or not isinstance(tokens, list):
                 raise ValueError("A lista de tokens está vazia ou em um formato incorreto. Verifique o lexico.py.")
 
-            parser = Parser(lista)  # Inicializa o parser com a lista de tokens
-            parser.parse_function()  # Inicia o parsing da função
-            print("Parsing concluído com sucesso!")
-            print("Lista de instruções gerada pelo sintático:")
-            print(parser)
+            print("Lista de tokens recebida:")
+            for token in tokens:
+                print(token)  # Exibe os tokens para depuração
+
+            # Inicializa o parser com a lista de tokens
+            parser = Parser(tokens)
+
+            # Gera a árvore sintática
+            root_node = parser.parse_function()
+
+            # Imprime a árvore sintática
+            print("Árvore sintática gerada:")
+            print(root_node)
 
         except SyntaxError as e:
             print(f"Erro de sintaxe: {e}")
+        except Exception as e:
+            print(f"Erro inesperado: {e}")
+    else:
+        print("Erro: Nenhum arquivo foi especificado. Por favor, forneça o nome do arquivo.")
+        sys.exit(1)
