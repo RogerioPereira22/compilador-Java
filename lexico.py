@@ -355,7 +355,7 @@ def main(nome_arquivo):
 if __name__ == "__main__":
     if len(sys.argv) > 1:
         lista = main(sys.argv[1])
-        print(lista)
+        #print(lista)
     else:
         
         # Exibe uma mensagem se nenhum argumento foi passado

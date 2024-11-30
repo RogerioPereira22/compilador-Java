@@ -43,8 +43,11 @@ class Parser:
         """<function*> -> <type> 'IDENT' '(' ')' <bloco> ;"""
         type_node = self.parse_type()  # Analisa o tipo da função
         ident_node = self.match('IDENTIFIER')  # Analisa o identificador da função
-        self.match('OPEN_PAREN')  # Verifica e consome o parêntese de abertura
-        self.match('CLOSE_PAREN')  # Verifica e consome o parêntese de fechamento
+        if self.current_token.lexeme == 'system':
+            self.parse_io_stmt()  # Analisa uma instrução de I/O    
+        else:
+            self.match('OPEN_PAREN')  # Verifica e consome o parêntese de abertura
+            self.match('CLOSE_PAREN')  # Verifica e consome o parêntese de fechamento    
         block_node = self.parse_block()  # Analisa o bloco de código da função
         return Node("function", [type_node, ident_node, block_node])  # Retorna o nó da função
 
@@ -53,8 +56,10 @@ class Parser:
         # Verifica se o token atual é um tipo válido
         if self.current_token.type == 'IDENTIFIER' and self.current_token.lexeme in ['int', 'float', 'string']:
             return self.match('IDENTIFIER')
+        if self.current_token.type == 'STRING':
+            return self.match('STRING')
         else:
-            raise SyntaxError("Tipo esperado: int, float ou string")
+            raise SyntaxError(f"Tipo esperado: int, float ou string {self.current_token}")
 
     def parse_block(self):
         """<bloco> -> '{' <stmtList> '}'"""
@@ -71,16 +76,18 @@ class Parser:
         return Node("stmtList", stmt_list)  # Retorna o nó da lista de instruções
 
     def parse_stmt(self):
-        """<stmt> -> <forStmt> | <ioStmt> | <whileStmt> | <expr> ';' | <ifStmt> | <bloco> | 'break' | 'continue' | <declaration> | ';'"""
+        """<stmt> -> <forStmt> | <ioStmt> | <whileStmt> | <atrib> ';' | <ifStmt> | <bloco> | 'break' | 'continue' | <declaration> | ';'"""
         # Lógica para identificar e analisar diferentes tipos de instruções
-        if self.current_token.type == 'IDENTIFIER' and self.current_token.lexeme in ['int', 'float', 'string']:
+        if self.current_token.type == 'IDENTIFIER' and self.current_token.lexeme in ['float', 'int', 'string']:
             return self.parse_declaration()  # Analisa uma declaração de variável
+        
         if self.current_token.type == 'VARIABLE':
             var_node = Node("variable", value=self.current_token.lexeme)
             self.next_token()
+            print(self.current_token.type)
             if self.current_token.type == 'ASSIGN':
                 self.next_token()  # Consome o token de atribuição
-                expr_node = self.parse_expr()  # Analisa a expressão à direita do '='
+                expr_node = self.parse_atrib()  # Analisa a expressão à direita do '='
                 self.match('SEMICOLON')  # Verifica e consome o ponto e vírgula
                 return Node("assign_stmt", [var_node, expr_node])  # Retorna o nó de atribuição
         elif self.current_token.type == 'OPEN_BRACE':
@@ -96,11 +103,14 @@ class Parser:
             self.next_token()
             self.match('SEMICOLON')  # Verifica e consome o ponto e vírgula
             return Node("control", value=value)  # Retorna o nó de controle (break/continue)
+        elif self.current_token.type == 'IDENTIFIER' and self.current_token.lexeme == 'system':
+            self.parse_io_stmt()  # Analisa uma instrução de I/O
         elif self.current_token.type == 'SEMICOLON':
             self.next_token()  # Consome o ponto e vírgula
             return Node("empty_stmt")  # Retorna um nó de instrução vazia
         else:
             raise SyntaxError(f"Instrução inválida: {self.current_token}")
+
 
     def parse_declaration(self):
         """<declaration> -> <type> <identList> ';'"""
@@ -142,8 +152,9 @@ class Parser:
 
     def parse_io_stmt(self):
         """<ioStmt> -> 'system' '.' 'out' '.' 'print' '(' <type> ',' 'IDENT' ')' ';' | 'system' '.' 'in' '.' 'scan' '(' <outList> ')' ';'"""
-        self.match('IDENTIFIER')  # 'system'
-        self.match('DOT')
+        if self.current_token.lexeme == 'system':
+            self.match('IDENTIFIER')  # 'system'
+            self.match('DOT')
         if self.current_token.lexeme == 'out':
             self.next_token()
             self.match('DOT')
@@ -262,15 +273,15 @@ class Parser:
             self.parse_fator()  # Analisa o fator
 
     def parse_fator(self):
-        """<fator> -> 'NUMint' | 'NUMfloat' | 'NUMoct' | 'NUMhex' | 'IDENT' | '(' <expr> ')' | 'STR'"""
-        if self.current_token.type in ['NUMint', 'NUMfloat', 'NUMoct', 'NUMhex', 'VARIABLE', 'STR']:
+        """<fator> -> 'INT' | 'FLOAT' | 'OCT' | 'HEX' | 'IDENT' | '(' <expr> ')' | 'STR'"""
+        if self.current_token.type in ['INT', 'FLOAT', 'OCTAL_INT', 'HEXADECIMAL_INT', 'VARIABLE', 'STR', 'SCIENTIFIC_FLOAT','DECIMAL_INT']:
             self.next_token()  # Consome o token
         elif self.current_token.type == 'OPEN_PAREN':
             self.next_token()  # Consome o parêntese de abertura
             self.parse_expr()  # Analisa a expressão dentro dos parênteses
             self.match('CLOSE_PAREN')  # Verifica e consome o parêntese de fechamento
         else:
-            raise SyntaxError("Fator esperado")
+            raise SyntaxError(f"Fator esperado: {self.current_token}, {self.current_token.type}, {self.current_token.lexeme}")
 
 # Código principal para executar o parser
 if __name__ == "__main__":
