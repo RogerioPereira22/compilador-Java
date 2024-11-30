@@ -83,13 +83,9 @@ class Parser:
         
         if self.current_token.type == 'VARIABLE':
             var_node = Node("variable", value=self.current_token.lexeme)
-            self.next_token()
-            print(self.current_token.type)
-            if self.current_token.type == 'ASSIGN':
-                self.next_token()  # Consome o token de atribuição
-                expr_node = self.parse_atrib()  # Analisa a expressão à direita do '='
-                self.match('SEMICOLON')  # Verifica e consome o ponto e vírgula
-                return Node("assign_stmt", [var_node, expr_node])  # Retorna o nó de atribuição
+            expr_node = self.parse_atrib()  # Analisa a expressão à direita do '='
+            self.match('SEMICOLON')  # Verifica e consome o ponto e vírgula
+            return Node("assign_stmt", [var_node, expr_node])  # Retorna o nó de atribuição
         elif self.current_token.type == 'OPEN_BRACE':
             return self.parse_block()  # Analisa um bloco de código
         elif self.current_token.type == 'IDENTIFIER' and self.current_token.lexeme == 'while':
@@ -124,14 +120,32 @@ class Parser:
             return Node("declaration", [type_node, ident_list_node])
         else:
             raise SyntaxError(f"Erro de sintaxe: Tipo esperado mas encontrado {self.current_token}")
-
+        
     def parse_ident_list(self):
         """<identList> -> 'IDENT' <restoIdentList>"""
-        nodes = [self.match('VARIABLE')]  # Começa com um identificador
-        while self.current_token and self.current_token.type == 'COMMA':
-            self.next_token()  # Consome a vírgula
-            nodes.append(self.match('VARIABLE'))  # Adiciona o próximo identificador
-        return Node("identList", nodes)  # Retorna o nó da lista de identificadores
+        if self.current_token.type == 'VARIABLE':
+            ident_node = Node("identifier", value=self.current_token.lexeme)
+            self.next_token()  # Consome o identificador
+            resto_node = self.parse_resto_ident_list()  # Analisa o resto da lista de identificadores
+            return Node("ident_list", [ident_node, resto_node])
+        else:
+            raise SyntaxError(f"Erro de sintaxe: IDENT esperado mas encontrado {self.current_token}")
+        
+
+    def parse_resto_ident_list(self):
+        """<restoIdentList> -> ',' 'IDENT' <restoIdentList> | &"""
+        if self.current_token.type == 'COMMA':
+            self.next_token()  # Consome ','
+            if self.current_token.type == 'VARIABLE':
+                ident_node = Node("identifier", value=self.current_token.lexeme)
+                self.next_token()  # Consome o identificador
+                resto_node = self.parse_resto_ident_list()  # Analisa o resto da lista
+                return Node("resto_ident_list", [ident_node, resto_node])
+            else:
+                raise SyntaxError(f"Erro de sintaxe: IDENT esperado após ',' mas encontrado {self.current_token}")
+        else:
+            return Node("empty")  # Produção vazia
+
 
     # Outros métodos para analisar loops, instruções de controle, expressões, etc.
     def parse_for_stmt(self):
@@ -168,7 +182,7 @@ class Parser:
             self.match('OPEN_PAREN')
             self.parse_type()
             self.match('COMMA')
-            self.match('VARIABLE')
+            self.parse_out_list()
             self.match('CLOSE_PAREN')
             self.match('SEMICOLON')
         elif self.current_token.lexeme == 'in':
@@ -188,10 +202,15 @@ class Parser:
             self.parse_out()  # Analisa a próxima saída
 
     def parse_out(self):
+
         """<out> -> 'STR' | 'IDENT' | 'NUMdec' | 'NUMfloat' | 'NUMoct' | 'NUMhex'"""
-        if self.current_token.type in ['STR', 'VARIABLE', 'NUMdec', 'NUMfloat', 'NUMoct', 'NUMhex']:
+        if self.current_token.type in ['STRING','IDENTIFIER', 'VARIABLE', 'SCIENTIFIC_FLOAT', 'FLOAT', 'DECIMAL_INT', 'HEXADECIMAL_INT', 'OCTAL_INT']:
             self.next_token()  # Consome o token
         else:
+            print("entrei no else do parse_out")
+            print(self.current_token.type)
+            print(self.current_token.lexeme)
+            print(self.current_token)
             raise SyntaxError("Saída inválida")
 
     def parse_while_stmt(self):
@@ -203,6 +222,7 @@ class Parser:
         self.parse_stmt()  # Analisa a instrução no corpo do loop
 
     def parse_if_stmt(self):
+        print("entrei no if stmt")
         """<ifStmt> -> 'if' '(' <expr> ')' <stmt> <elsePart>"""
         self.match('IDENTIFIER')  # 'if'
         self.match('OPEN_PAREN')
@@ -214,28 +234,41 @@ class Parser:
             self.parse_stmt()  # Analisa a instrução no corpo do else
 
     def parse_atrib(self):
-        """<atrib> -> 'IDENT' ':=' <expr> | 'IDENT' '+=' <expr> | 'IDENT' '-=' <expr> | 'IDENT' '*=' <expr> | 'IDENT' '/=' <expr> | 'IDENT' '%=' <expr>"""
+        """<atrib> -> 'IDENT' '=' <expr>"""
+        print("entrei no atrib")
+        print(self.current_token.type)
         if self.current_token.type == 'VARIABLE':
+            print("entrei no if abrib")
+            var_node = Node("variable", value=self.current_token.lexeme)
             self.next_token()  # Consome o identificador
             if self.current_token.type in ['ASSIGN', 'ADD_ASSIGN', 'SUB_ASSIGN', 'MUL_ASSIGN', 'DIV_ASSIGN', 'MOD_ASSIGN']:
+                operator_token = self.current_token
                 self.next_token()  # Consome o operador de atribuição
-                self.parse_expr()  # Analisa a expressão
+                expr_node = self.parse_expr()  # Analisa a expressão à direita do '='
+                return Node("assign_stmt", [var_node, operator_token, expr_node])
             else:
                 raise SyntaxError("Operador de atribuição esperado")
 
     def parse_expr(self):
         """<expr> -> <or>"""
+        print("entrei no expr")
         self.parse_or()  # Analisa a expressão lógica 'or'
+        
 
     def parse_or(self):
         """<or> -> <and> <restoOr>"""
-        self.parse_and()  # Analisa a expressão lógica 'and'
+        print("entrei no or")
+        left_node = self.parse_and()
         while self.current_token and self.current_token.type == 'LOGICAL_OR':
-            self.next_token()  # Consome o operador 'or'
-            self.parse_and()  # Analisa a próxima expressão 'and'
+            operator_token = self.current_token
+            self.next_token()
+            right_node = self.parse_and()
+            left_node = Node("binary_op", [left_node, right_node], operator_token.lexeme)
+        return left_node
 
     def parse_and(self):
         """<and> -> <not> <restoAnd>"""
+        print("entrei no and")
         self.parse_not()  # Analisa a expressão lógica 'not'
         while self.current_token and self.current_token.type == 'LOGICAL_AND':
             self.next_token()  # Consome o operador 'and'
@@ -243,6 +276,7 @@ class Parser:
 
     def parse_not(self):
         """<not> -> '!' <not> | <rel>"""
+        print("entrei no not")
         if self.current_token and self.current_token.type == 'LOGICAL_NOT':
             self.next_token()  # Consome o operador '!'
             self.parse_not()  # Analisa a próxima expressão 'not'
@@ -251,6 +285,7 @@ class Parser:
 
     def parse_rel(self):
         """<rel> -> <add> <restoRel>"""
+        print("entrei no rel")
         self.parse_add()  # Analisa a expressão de adição
         if self.current_token and self.current_token.type in ['EQUAL', 'NOT_EQUAL', 'LESS', 'LESS_EQUAL', 'GREATER', 'GREATER_EQUAL']:
             self.next_token()  # Consome o operador relacional
@@ -258,6 +293,7 @@ class Parser:
 
     def parse_add(self):
         """<add> -> <mult> <restoAdd>"""
+        print("entrei no add")
         self.parse_mult()  # Analisa a expressão de multiplicação
         while self.current_token and self.current_token.type in ['ADD', 'SUB']:
             self.next_token()  # Consome o operador '+' ou '-'
@@ -265,29 +301,49 @@ class Parser:
 
     def parse_mult(self):
         """<mult> -> <uno> <restoMult>"""
+        print("entrei no mult")
         self.parse_uno()  # Analisa a expressão unária
         while self.current_token and self.current_token.type in ['MUL', 'DIV', 'MOD']:
             self.next_token()  # Consome o operador '*', '/' ou '%'
             self.parse_uno()  # Analisa a próxima expressão unária
-
+            
+        
     def parse_uno(self):
         """<uno> -> '+' <uno> | '-' <uno> | <fator>"""
+        print("entrei no uno")
         if self.current_token and self.current_token.type in ['ADD', 'SUB']:
             self.next_token()  # Consome o operador '+' ou '-'
             self.parse_uno()  # Analisa a próxima expressão unária
         else:
-            self.parse_fator()  # Analisa o fator
-
-    def parse_fator(self):
-        """<fator> -> 'INT' | 'FLOAT' | 'OCT' | 'HEX' | 'IDENT' | '(' <expr> ')' | 'STR'"""
-        if self.current_token.type in ['INT', 'FLOAT', 'OCTAL_INT', 'HEXADECIMAL_INT', 'VARIABLE', 'STR', 'SCIENTIFIC_FLOAT','DECIMAL_INT']:
-            self.next_token()  # Consome o token
-        elif self.current_token.type == 'OPEN_PAREN':
-            self.next_token()  # Consome o parêntese de abertura
-            self.parse_expr()  # Analisa a expressão dentro dos parênteses
-            self.match('CLOSE_PAREN')  # Verifica e consome o parêntese de fechamento
+            print("entrei else no uno")
+            self.parse_factor()  # Analisa o fator
+            
+    def parse_factor(self):
+        """<factor> -> '(' <expr> ')' | 'IDENT' | 'NUMdec' | 'NUMfloat' | 'NUMoct' | 'NUMhex' | 'STRING'"""
+        print("entrei no factor")
+        print(self.current_token.type)
+        if self.current_token.type == 'OPEN_PAREN':
+            self.next_token()
+            expr_node = self.parse_expr()
+            if self.current_token.type != 'CLOSE_PAREN':
+                raise SyntaxError(f"Erro de sintaxe: Esperado ')' mas encontrado {self.current_token}")
+            self.next_token()
+            return expr_node
+        elif self.current_token.type in ['DECIMAL_INT', 'FLOAT', 'OCTAL_INT', 'HEXADECIMAL_INT', 'STRING','SCIENTIFIC_FLOAT']:
+            literal_node = Node("literal", value=self.current_token.lexeme)
+            self.next_token()  # Consome o literal
+            print("literal_node",literal_node)  
+            return literal_node
+        elif self.current_token.type == 'VARIABLE':
+            print("entrei no variable")
+            variable_node = Node("variable", value=self.current_token.lexeme)
+            self.next_token()
+            return variable_node
         else:
-            raise SyntaxError(f"Fator esperado: {self.current_token}, {self.current_token.type}, {self.current_token.lexeme}")
+            raise SyntaxError(f"Erro de sintaxe: Token inesperado {self.current_token}")
+    
+
+
 
 # Código principal para executar o parser
 if __name__ == "__main__":
