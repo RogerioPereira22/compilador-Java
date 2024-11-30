@@ -114,10 +114,16 @@ class Parser:
 
     def parse_declaration(self):
         """<declaration> -> <type> <identList> ';'"""
-        type_node = self.parse_type()  # Analisa o tipo
-        ident_list_node = self.parse_ident_list()  # Analisa a lista de identificadores
-        self.match('SEMICOLON')  # Verifica e consome o ponto e vírgula
-        return Node("declaration", [type_node, ident_list_node])  # Retorna o nó da declaração
+        if self.current_token.type in ['IDENTIFIER']:
+            type_node = Node("type", value=self.current_token.lexeme)
+            self.next_token()  # Consome o tipo
+            ident_list_node = self.parse_ident_list()  # Analisa a lista de identificadores
+            if self.current_token.type != 'SEMICOLON':
+                raise SyntaxError(f"Erro de sintaxe: Esperado ';' mas encontrado {self.current_token}")
+            self.next_token()  # Consome ';'
+            return Node("declaration", [type_node, ident_list_node])
+        else:
+            raise SyntaxError(f"Erro de sintaxe: Tipo esperado mas encontrado {self.current_token}")
 
     def parse_ident_list(self):
         """<identList> -> 'IDENT' <restoIdentList>"""
