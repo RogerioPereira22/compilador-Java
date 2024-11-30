@@ -208,7 +208,10 @@ class Parser:
                 self.match('DOT')
                 self.match('IDENTIFIER')  # 'scan'
                 self.match('OPEN_PAREN')
-                in_list = self.parse_out_list()  # Analisa os argumentos de entrada
+                in_list = [None, None] # Inicializa a lista de entrada
+                in_list[0] = self.parse_type()  # Analisa os argumentos de entrada
+                self.match('COMMA')
+                in_list[1] = self.match('VARIABLE')  # Identificador
                 self.match('CLOSE_PAREN')
                 self.match('SEMICOLON')
                 return Node("io_stmt", [Node("input", in_list)])  # Retorna o nó de entrada
