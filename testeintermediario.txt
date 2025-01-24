@@ -1,0 +1,11 @@
+('=', 'x', '10', None),  # Atribui 10 a 'x'
+('CALL', 'PRINT', 'Valor de x: ', None),  # Imprime o texto 'Valor de x: '
+('CALL', 'PRINT', None, 'x'),  # Imprime o valor de 'x'
+
+('=', 'y', '5', None),  # Atribui 5 a 'y'
+('CALL', 'PRINT', 'Valor de y: ', None),  # Imprime o texto 'Valor de y: '
+('CALL', 'PRINT', None, 'y'),  # Imprime o valor de 'y'
+
+('+', 'z', 'x', 'y'),  # Soma 'x' e 'y' e armazena em 'z'
+('CALL', 'PRINT', 'Resultado de x + y: ', None),  # Imprime o texto 'Resultado de x + y: '
+('CALL', 'PRINT', None, 'z')  # Imprime o valor de 'z' (resultado da soma)

@@ -1,3 +1,5 @@
-int main(){float f;
-f = 3.14;
+int main(){
+    float f;
+    system.out.print("Hello World");
+    f = 1 + 2 + 3 + 4;
 }
