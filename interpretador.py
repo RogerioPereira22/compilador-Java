@@ -1,3 +1,4 @@
+import sys
 class Interpretador:
     def __init__(self, tuplas):
         self.tuplas = tuplas
@@ -181,8 +182,18 @@ def carregar_codigo_intermediario(caminho):
             print(f"Erro ao processar a instrução: {line} - {e}")
     return tuplas
 
-if __name__ == "__main__":
-    caminho = "exCodIntermediario.txt"
+def main(caminho):
     tuplas = carregar_codigo_intermediario(caminho)
     interpretador = Interpretador(tuplas)
     interpretador.executar()
+
+if __name__ == "__main__":
+    if len(sys.argv) > 1:
+        lista = main(sys.argv[1])
+        #print(lista)
+    else:
+        
+        # Exibe uma mensagem se nenhum argumento foi passado
+        print("Erro: Nenhum arquivo foi especificado. Por favor, forneça o nome do arquivo.")
+        sys.exit(1)
+    
