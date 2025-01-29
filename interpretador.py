@@ -1,59 +1,59 @@
 import sys
 
-class Interpreter:
-    def __init__(self, instructions):
-        self.instructions = instructions  # Lista de instruções carregadas
-        self.variables = {}  # Armazena variáveis do programa
+class Interpretador:
+    def __init__(self, intruções):
+        self.instrucoes = intruções  # Lista de instruções carregadas
+        self.variaveis = {}  # Armazena variáveis do programa
         self.temp_vars = {}  # Armazena variáveis temporárias
         self.labels = {}  # Dicionário para armazenar rótulos (LABEL)
-        self.current_instruction = 0  # Índice da instrução atual
+        self.current_instrucao = 0  # Índice da instrução atual
         self.preprocess_labels()  # Pré-processa os rótulos antes da execução
 
     def preprocess_labels(self):
         """Identifica e armazena rótulos (LABEL) para referência futura."""
-        for idx, instruction in enumerate(self.instructions):
-            if isinstance(instruction, (list, tuple)) and instruction and isinstance(instruction[0], str):
-                if instruction[0].upper() == "LABEL":
-                    label_name = instruction[1]
+        for idx, instrucao in enumerate(self.instrucoes):
+            if isinstance(instrucao, (list, tuple)) and instrucao and isinstance(instrucao[0], str):
+                if instrucao[0].upper() == "LABEL":
+                    label_name = instrucao[1]
                     self.labels[label_name] = idx  # Mapeia o nome do rótulo para sua posição
 
-    def run(self):
+    def rodar(self):
         """Executa as instruções interpretadas até atingir um limite de iterações."""
-        max_iterations = 150
-        iteration_count = 0
+        max_iteracoes = 2000  # Limite de iterações para evitar loops infinitos
+        contarInteracao = 0
 
-        while self.current_instruction < len(self.instructions) and iteration_count < max_iterations:
-            iteration_count += 1
-            instruction = self.instructions[self.current_instruction]
-            operator = instruction[0]  # Identifica a operação da instrução
+        while self.current_instrucao < len(self.instrucoes) and contarInteracao < max_iteracoes:
+            contarInteracao += 1
+            instrucao = self.instrucoes[self.current_instrucao]
+            operator = instrucao[0]  # Identifica a operação da instrução
 
             try:
                 if operator == "=":
-                    self.assign(instruction)
+                    self.atribuir(instrucao)
                 elif operator == "CALL":
-                    self.system_call(instruction)
+                    self.system_call(instrucao)
                 elif operator in ["+", "-", "*", "/", "%", "//"]:
-                    self.arithmetic_operation(instruction)
+                    self.operar_aritimetica(instrucao)
                 elif operator in ["||", "&&", "!", "==", "<>", ">", ">=", "<", "<="]:
-                    self.logical_operation(instruction)
+                    self.logical_operation(instrucao)
                 elif operator == "IF":
-                    self.conditional_jump(instruction)
+                    self.conditional_jump(instrucao)
                 elif operator == "JUMP":
-                    self.jump(instruction)
+                    self.jump(instrucao)
                 elif operator == "LABEL":
                     pass  # Labels já foram processados no pré-processamento
                 else:
                     raise ValueError(f"Operador desconhecido: {operator}")
 
-                self.current_instruction += 1  # Avança para a próxima instrução
+                self.current_instrucao += 1  # Avança para a próxima instrução
             except Exception as e:
-                print(f"Erro na instrução {self.current_instruction}: {instruction} - {e}")
+                print(f"Erro na instrução {self.current_instrucao}: {instrucao} - {e}")
                 break
 
-        if iteration_count >= max_iterations:
+        if contarInteracao >= max_iteracoes:
             print("Número máximo de iterações atingido.")
 
-    def get_value(self, operand):
+    def obt_valor(self, operand):
         """Retorna o valor do operando, seja ele uma variável ou um valor direto."""
         if operand is None:
             return None
@@ -61,23 +61,23 @@ class Interpreter:
             return operand
         if operand.isdigit():
             return int(operand)
-        return self.variables.get(operand, self.temp_vars.get(operand))
+        return self.variaveis.get(operand, self.temp_vars.get(operand))
 
-    def print_value(self, value, variable):
+    def print_valor(self, valor, variavel):
         """Imprime o valor de uma variável ou um valor direto."""
-        if value is not None:
-            if isinstance(value, str):
-                print(value, end="")
+        if valor is not None:
+            if isinstance(valor, str):
+                print(valor, end="")
             else:
-                print(self.get_value(value) if value not in self.variables else value, end="")
-        elif variable is not None:
-            value_to_print = self.get_value(variable)
-            print(value_to_print if value_to_print is not None else f"Erro: '{variable}' não encontrada.", end="")
+                print(self.obt_valor(valor) if valor not in self.variaveis else valor, end="")
+        elif variavel is not None:
+            valor_to_print = self.obt_valor(variavel)
+            print(valor_to_print if valor_to_print is not None else f"Erro: '{variavel}' não encontrada.", end="")
 
-    def arithmetic_operation(self, instruction):
+    def operar_aritimetica(self, instrucao):
         """Executa operações aritméticas básicas."""
-        operator, dest, op1, op2 = instruction
-        val1, val2 = self.get_value(op1), self.get_value(op2)
+        operator, destino, op1, op2 = instrucao
+        val1, val2 = self.obt_valor(op1), self.obt_valor(op2)
         result = {
             "+": val1 + val2,
             "-": val1 - val2,
@@ -86,12 +86,12 @@ class Interpreter:
             "%": val1 % val2 if val2 != 0 else 0,
             "//": val1 // val2 if val2 != 0 else 0,
         }.get(operator, 0)
-        self.store_result(dest, result)
+        self.armazen_restado(destino, result)
 
-    def logical_operation(self, instruction):
+    def logical_operation(self, instrucao):
         """Executa operações lógicas e comparações."""
-        operator, dest, op1, op2 = instruction
-        val1, val2 = self.get_value(op1), self.get_value(op2)
+        operator, destino, op1, op2 = instrucao
+        val1, val2 = self.obt_valor(op1), self.obt_valor(op2)
         result = {
             "||": val1 or val2,
             "&&": val1 and val2,
@@ -103,73 +103,73 @@ class Interpreter:
             "<": val1 < val2,
             "<=": val1 <= val2,
         }.get(operator, False)
-        self.store_result(dest, result)
+        self.armazen_restado(destino, result)
 
-    def store_result(self, dest, value):
+    def armazen_restado(self, destino, valor):
         """Armazena o resultado de uma operação em uma variável."""
-        if dest.startswith("__temp"):
-            self.temp_vars[dest] = value
+        if destino.startswith("__temp"):
+            self.temp_vars[destino] = valor
         else:
-            self.variables[dest] = value
+            self.variaveis[destino] = valor
 
-    def assign(self, instruction):
+    def atribuir(self, instrucao):
         """Atribui um valor a uma variável."""
-        _, dest, value, _ = instruction
-        self.variables[dest] = self.get_value(value)
+        _, destino, valor, _ = instrucao
+        self.variaveis[destino] = self.obt_valor(valor)
 
-    def conditional_jump(self, instruction):
+    def conditional_jump(self, instrucao):
         """Realiza um desvio condicional baseado no valor da condição."""
-        _, condition, label1, label2 = instruction
-        condition_value = self.get_value(condition)
-        next_label = label1 if condition_value else label2
+        _, condition, label1, label2 = instrucao
+        condition_valor = self.obt_valor(condition)
+        next_label = label1 if condition_valor else label2
         if next_label in self.labels:
-            self.current_instruction = self.labels[next_label] - 1
+            self.current_instrucao = self.labels[next_label] - 1
         else:
             raise ValueError(f"Label {next_label} não encontrado.")
 
-    def jump(self, instruction):
+    def jump(self, instrucao):
         """Realiza um salto incondicional para um rótulo."""
-        _, label, *_ = instruction
+        _, label, *_ = instrucao
         if label in self.labels:
-            self.current_instruction = self.labels[label] - 1
+            self.current_instrucao = self.labels[label] - 1
         else:
             raise ValueError(f"Label {label} não encontrado.")
 
-    def system_call(self, instruction):
+    def system_call(self, instrucao):
         """Executa chamadas de sistema como PRINT e SCAN."""
-        _, command, value, variable = instruction
-        if command == "PRINT":
-            self.print_value(value, variable)
-        elif command == "SCAN":
+        _, comando, valor, variavel = instrucao
+        if comando == "PRINT":
+            self.print_valor(valor, variavel)
+        elif comando == "SCAN":
             try:
-                self.variables[variable] = int(input())
+                self.variaveis[variavel] = int(input())
             except ValueError:
                 print("Erro: entrada inválida. Insira um número inteiro.")
 
 # Carrega e processa código intermediário
 
-def load_intermediate_code(path):
+def load_intermediario_cod(path):
     with open(path, "r") as file:
-        content = file.read().strip().splitlines()
+        conteudo = file.read().strip().splitlines()
 
-    instructions = []
-    for line in content:
+    intruções = []
+    for linha in conteudo:
         try:
-            instruction = eval(line)
-            if isinstance(instruction, (tuple, list)):
-                if isinstance(instruction[0], tuple):
-                    instruction = instruction[0]
-                instructions.append(instruction)
+            instrucao = eval(linha)
+            if isinstance(instrucao, (tuple, list)):
+                if isinstance(instrucao[0], tuple):
+                    instrucao = instrucao[0]
+                intruções.append(instrucao)
         except Exception as e:
-            print(f"Erro ao processar a instrução: {line} - {e}")
-    return instructions
+            print(f"Erro ao processar a instrução: {linha} - {e}")
+    return intruções
 
 # Função principal
 
 def main(path):
-    instructions = load_intermediate_code(path)
-    interpreter = Interpreter(instructions)
-    interpreter.run()
+    instruções = load_intermediario_cod(path)
+    Inter = Interpretador(instruções)
+    Inter.rodar()
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
