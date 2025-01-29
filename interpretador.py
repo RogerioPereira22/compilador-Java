@@ -1,10 +1,11 @@
 import sys
+import ast
 
 class Interpretador:
     def __init__(self, intruções):
         self.instrucoes = intruções  # Lista de instruções carregadas
-        self.variaveis = {}  # Armazena variáveis do programa
-        self.temp_vars = {}  # Armazena variáveis temporárias
+        self.variaveis = {}  # Armazena variáveis e seus valores
+        self.temp_vars = {}  # Armazena variáveis temporárias (usadas para cálculos)
         self.labels = {}  # Dicionário para armazenar rótulos (LABEL)
         self.current_instrucao = 0  # Índice da instrução atual
         self.preprocess_labels()  # Pré-processa os rótulos antes da execução
@@ -13,6 +14,7 @@ class Interpretador:
         """Identifica e armazena rótulos (LABEL) para referência futura."""
         for idx, instrucao in enumerate(self.instrucoes):
             if isinstance(instrucao, (list, tuple)) and instrucao and isinstance(instrucao[0], str):
+                #verifica se a instrução é uma lista ou tupla e se a primeira posição é uma string
                 if instrucao[0].upper() == "LABEL":
                     label_name = instrucao[1]
                     self.labels[label_name] = idx  # Mapeia o nome do rótulo para sua posição
@@ -35,7 +37,7 @@ class Interpretador:
                 elif operator in ["+", "-", "*", "/", "%", "//"]:
                     self.operar_aritimetica(instrucao)
                 elif operator in ["||", "&&", "!", "==", "<>", ">", ">=", "<", "<="]:
-                    self.logical_operation(instrucao)
+                    self.operarLogica(instrucao)
                 elif operator == "IF":
                     self.conditional_jump(instrucao)
                 elif operator == "JUMP":
@@ -66,9 +68,10 @@ class Interpretador:
     def print_valor(self, valor, variavel):
         """Imprime o valor de uma variável ou um valor direto."""
         if valor is not None:
-            if isinstance(valor, str):
+            if isinstance(valor, str):#quando o valor é uma string, ele será impresso diretamente
                 print(valor, end="")
             else:
+                #se o valor não for uma string, ele será impresso após ser convertido para inteiro
                 print(self.obt_valor(valor) if valor not in self.variaveis else valor, end="")
         elif variavel is not None:
             valor_to_print = self.obt_valor(variavel)
@@ -82,13 +85,13 @@ class Interpretador:
             "+": val1 + val2,
             "-": val1 - val2,
             "*": val1 * val2,
-            "/": val1 / val2 if val2 != 0 else 0,
+            "/": val1 / val2 if val2 != 0 else 0,#se o divisor for 0, o resultado será 0
             "%": val1 % val2 if val2 != 0 else 0,
             "//": val1 // val2 if val2 != 0 else 0,
         }.get(operator, 0)
         self.armazen_restado(destino, result)
 
-    def logical_operation(self, instrucao):
+    def operarLogica(self, instrucao):
         """Executa operações lógicas e comparações."""
         operator, destino, op1, op2 = instrucao
         val1, val2 = self.obt_valor(op1), self.obt_valor(op2)
@@ -121,6 +124,7 @@ class Interpretador:
         """Realiza um desvio condicional baseado no valor da condição."""
         _, condition, label1, label2 = instrucao
         condition_valor = self.obt_valor(condition)
+         #se a condição for verdadeira, o próximo label será label1, senão será label2
         next_label = label1 if condition_valor else label2
         if next_label in self.labels:
             self.current_instrucao = self.labels[next_label] - 1
@@ -131,7 +135,7 @@ class Interpretador:
         """Realiza um salto incondicional para um rótulo."""
         _, label, *_ = instrucao
         if label in self.labels:
-            self.current_instrucao = self.labels[label] - 1
+            self.current_instrucao = self.labels[label] - 1 #subtraindo 1 para que a próxima instrução seja a instrução do label
         else:
             raise ValueError(f"Label {label} não encontrado.")
 
@@ -142,7 +146,7 @@ class Interpretador:
             self.print_valor(valor, variavel)
         elif comando == "SCAN":
             try:
-                self.variaveis[variavel] = int(input())
+                self.variaveis[variavel] = int(input())#lendo a entrada do usuário e convertendo para inteiro
             except ValueError:
                 print("Erro: entrada inválida. Insira um número inteiro.")
 
@@ -150,12 +154,13 @@ class Interpretador:
 
 def load_intermediario_cod(path):
     with open(path, "r") as file:
-        conteudo = file.read().strip().splitlines()
+        conteudo = file.read().strip().splitlines() #lendo o arquivo e separando por linhas
 
     intruções = []
     for linha in conteudo:
         try:
-            instrucao = eval(linha)
+            instrucao = ast.literal_eval(linha) 
+            #u sando ast.literal_eval para converter a string em uma lista e para não ter problemas com segurança
             if isinstance(instrucao, (tuple, list)):
                 if isinstance(instrucao[0], tuple):
                     instrucao = instrucao[0]
