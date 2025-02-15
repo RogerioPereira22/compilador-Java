@@ -149,7 +149,8 @@ class Interpretador:
                 self.variaveis[variavel] = int(input())#lendo a entrada do usuário e convertendo para inteiro
             except ValueError:
                 print("Erro: entrada inválida. Insira um número inteiro.")
-
+        elif comando == "STOP":
+            SystemExit()
 # Carrega e processa código intermediário
 
 def load_intermediario_cod(path):
@@ -162,7 +163,7 @@ def load_intermediario_cod(path):
             instrucao = ast.literal_eval(linha) 
             #u sando ast.literal_eval para converter a string em uma lista e para não ter problemas com segurança
             if isinstance(instrucao, (tuple, list)):
-                if isinstance(instrucao[0], tuple):
+                if isinstance(instrucao[0], tuple):#se a primeira posição for uma tupla, a instrução será uma lista de instruções
                     instrucao = instrucao[0]
                 intruções.append(instrucao)
         except Exception as e:

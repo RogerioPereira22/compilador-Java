@@ -25,6 +25,51 @@ class Node:
                 ret += "\t" * (level + 1) + f"Erro: Objeto inesperado {child}\n"
         return ret
 
+class CodeGenerator:
+    def __init__(self):
+        self.code = []
+        self.label_count = 0
+        self.temp_count = 0
+
+    def nova_label(self):
+        self.label_count += 1
+        return f"L{self.label_count}"
+
+    def novo_temp(self):
+        self.temp_count += 1
+        return f"T{self.temp_count}"
+
+    def gerar_atrib(self, var, expr):
+        self.code.append(("=", var, expr, None))
+
+    def gerar_io(self, command, var, var_type=None):
+        if command == "print":
+            self.code.append(("CALL", "READ", var, None))
+        elif command == "scan":
+            self.code.append(("CALL", "SCAN", var, var_type))
+
+    def gerar_if(self, condition, label_true, label_false):
+        self.code.append(("IF", condition, label_true, label_false))
+
+    def gerar_jump(self, label):
+        self.code.append(("JUMP", label, None, None))
+
+    def gerar_label(self, label):
+        self.code.append(("LABEL", label, None, None))
+
+    def gerar_for(self, init, condition, increment, body_code):
+        start_label = self.nova_label()
+        end_label = self.nova_label()
+        self.gerar_atrib(*init)
+        self.gerar_label(start_label)
+        self.gerar_if(condition, None, end_label)
+        self.code.extend(body_code)
+        self.gerar_atrib(*increment)
+        self.gerar_jump(start_label)
+        self.gerar_label(end_label)
+
+    def retornar_codigo(self):
+        return self.code
 
 
 
@@ -67,14 +112,11 @@ class Parser:
 
     def parse_type(self):
         """<type> -> 'int' | 'float' | 'string'"""
-        # Verifica se o token atual é um tipo válido
-        if self.current_token.type == 'IDENTIFIER' and self.current_token.lexeme in ['int', 'float', 'string']:
-            return self.match('IDENTIFIER')
-        if self.current_token.type == 'STRING':
-            return self.match('STRING')
+        if self.current_token.type == 'RESERVED_WORDS' and self.current_token.lexeme in ['int', 'float', 'string']:
+            return self.match('RESERVED_WORDS')
         else:
-            raise SyntaxError(f"Tipo esperado: int, float ou string {self.current_token}")
-
+            raise SyntaxError(f"Tipo esperado: int, float ou string, mas encontrado {self.current_token}")
+    
     def parse_block(self):
         """<bloco> -> '{' <stmtList> '}'"""
         self.match('OPEN_BRACE')  # Verifica e consome a chave de abertura
@@ -96,11 +138,11 @@ class Parser:
     def parse_stmt(self):
         """<stmt> -> <forStmt> | <ioStmt> | <whileStmt> | <atrib> ';' | <ifStmt> | <bloco> | 'break' | 'continue' | <declaration> | ';'"""
         # Lógica para identificar e analisar diferentes tipos de instruções
-        if self.current_token.type == 'IDENTIFIER' and self.current_token.lexeme in ['float', 'int', 'string']:
+        if self.current_token.type == 'RESERVED_WORDS' and self.current_token.lexeme in ['float', 'int', 'string']:
             return self.parse_declaration()  # Analisa uma declaração de variável
         
-        if self.current_token.type == 'VARIABLE':
-            var_node = Node("variable", value=self.current_token.lexeme)
+        if self.current_token.type == 'IDENTIFIER':
+            var_node = Node("IDENTIFIER", value=self.current_token.lexeme)
             expr_node = self.parse_atrib()  # Analisa a expressão à direita do '='
             if not expr_node:
                 raise SyntaxError("Erro ao analisar expressão na atribuição.")
@@ -108,13 +150,13 @@ class Parser:
             return Node("assign_stmt", [var_node, expr_node])  # Retorna o nó de atribuição
         elif self.current_token.type == 'OPEN_BRACE':
             return self.parse_block()  # Analisa um bloco de código
-        elif self.current_token.type == 'IDENTIFIER' and self.current_token.lexeme == 'while':
+        elif self.current_token.type == 'RESERVED_WORDS' and self.current_token.lexeme == 'while':
             return self.parse_while_stmt()  # Analisa um loop while
-        elif self.current_token.type == 'IDENTIFIER' and self.current_token.lexeme == 'if':
+        elif self.current_token.type == 'RESERVED_WORDS' and self.current_token.lexeme == 'if':
             return self.parse_if_stmt()  # Analisa uma instrução if
-        elif self.current_token.type == 'IDENTIFIER' and self.current_token.lexeme == 'for':
+        elif self.current_token.type == 'RESERVED_WORDS' and self.current_token.lexeme == 'for':
             return self.parse_for_stmt()  # Analisa um loop for
-        elif self.current_token.type == 'IDENTIFIER' and self.current_token.lexeme in ['break', 'continue']:
+        elif self.current_token.type == 'RESERVED_WORDS' and self.current_token.lexeme in ['break', 'continue']:
             value = self.current_token.lexeme
             self.next_token()
             self.match('SEMICOLON')  # Verifica e consome o ponto e vírgula
@@ -145,7 +187,7 @@ class Parser:
         
     def parse_ident_list(self):
         """<identList> -> 'IDENT' <restoIdentList>"""
-        if self.current_token.type == 'VARIABLE':
+        if self.current_token.type == 'IDENTIFIER':
             ident_node = Node("identifier", value=self.current_token.lexeme)
             self.next_token()  # Consome o identificador
             resto_node = self.parse_resto_ident_list()  # Analisa o resto da lista de identificadores
@@ -158,7 +200,7 @@ class Parser:
         """<restoIdentList> -> ',' 'IDENT' <restoIdentList> | &"""
         if self.current_token.type == 'COMMA':
             self.next_token()  # Consome ','
-            if self.current_token.type == 'VARIABLE':
+            if self.current_token.type == 'IDENTIFIER':
                 ident_node = Node("identifier", value=self.current_token.lexeme)
                 self.next_token()  # Consome o identificador
                 resto_node = self.parse_resto_ident_list()  # Analisa o resto da lista
@@ -172,7 +214,7 @@ class Parser:
     # Outros métodos para analisar loops, instruções de controle, expressões, etc.
     def parse_for_stmt(self):
         """<forStmt> -> 'for' '(' <optAtrib> ';' <optExpr> ';' <optAtrib> ')' <stmt>"""
-        self.match('IDENTIFIER')  # 'for'
+        self.match('RESERVED_WORDS')  # 'for'
         self.match('OPEN_PAREN')
         self.parse_opt_atrib()  # Analisa a atribuição opcional
         self.match('SEMICOLON')
@@ -184,39 +226,39 @@ class Parser:
 
     def parse_opt_atrib(self):
         """<optAtrib> -> <atrib> | &"""
-        if self.current_token and self.current_token.type == 'VARIABLE':
+        if self.current_token and self.current_token.type == 'IDENTIFIER':
             return self.parse_atrib()  # Retorna o nó de atribuição, se houver
         return Node("empty")  # Produção vazia
 
 
     def parse_opt_expr(self):
         """<optExpr> -> <expr> | &"""
-        if self.current_token and self.current_token.type == 'VARIABLE':
+        if self.current_token and self.current_token.type == 'IDENTIFIER':
             self.parse_expr()  # Analisa a expressão, se houver
 
     def parse_io_stmt(self):
         """<ioStmt> -> 'system' '.' 'out' '.' 'print' '(' <outList> ')' ';' | 'system' '.' 'in' '.' 'scan' '(' <outList> ')' ';'"""
         if self.current_token.lexeme == 'system':
-            self.match('IDENTIFIER')  # 'system'
+            self.match('RESERVED_WORDS')  # 'system'
             self.match('DOT')
             if self.current_token.lexeme == 'out':
-                self.match('IDENTIFIER')  # 'out'
+                self.match('RESERVED_WORDS')  # 'out'
                 self.match('DOT')
-                self.match('IDENTIFIER')  # 'print'
+                self.match('RESERVED_WORDS')  # 'print'
                 self.match('OPEN_PAREN')
                 out_list = self.parse_out_list()  # Analisa os argumentos de saída
                 self.match('CLOSE_PAREN')
                 self.match('SEMICOLON')
                 return Node("io_stmt", [Node("output", out_list)])  # Retorna o nó de saída
             elif self.current_token.lexeme == 'in':
-                self.match('IDENTIFIER')  # 'in'
+                self.match('RESERVED_WORDS')  # 'in'
                 self.match('DOT')
-                self.match('IDENTIFIER')  # 'scan'
+                self.match('RESERVED_WORDS')  # 'scan'
                 self.match('OPEN_PAREN')
                 in_list = [None, None] # Inicializa a lista de entrada
                 in_list[0] = self.parse_type()  # Analisa os argumentos de entrada
                 self.match('COMMA')
-                in_list[1] = self.match('VARIABLE')  # Identificador
+                in_list[1] = self.match('IDENTIFIER')  # Identificador
                 self.match('CLOSE_PAREN')
                 self.match('SEMICOLON')
                 return Node("io_stmt", [Node("input", in_list)])  # Retorna o nó de entrada
@@ -235,7 +277,7 @@ class Parser:
 
     def parse_out(self):
         """<out> -> 'STR' | 'IDENT' | 'NUMdec' | 'NUMfloat' | 'NUMoct' | 'NUMhex'"""
-        if self.current_token.type in ['STRING', 'IDENTIFIER', 'VARIABLE', 'SCIENTIFIC_FLOAT', 'FLOAT', 'DECIMAL_INT', 'HEXADECIMAL_INT', 'OCTAL_INT']:
+        if self.current_token.type in ['STRING', 'IDENTIFIER', 'SCIENTIFIC_FLOAT', 'FLOAT', 'DECIMAL_INT', 'HEXADECIMAL_INT', 'OCTAL_INT']:
             node = Node("out", value=self.current_token.lexeme)
             self.next_token()  # Consome o token
             return node
@@ -244,7 +286,7 @@ class Parser:
 
     def parse_while_stmt(self):
         """<whileStmt> -> 'while' '(' <expr> ')' <stmt>"""
-        self.match('IDENTIFIER')  # 'while'
+        self.match('RESERVED_WORDS')  # 'while'
         self.match('OPEN_PAREN')
         self.parse_expr()  # Analisa a expressão de condição
         self.match('CLOSE_PAREN')
@@ -253,20 +295,20 @@ class Parser:
     def parse_if_stmt(self):
         #print("entrei no if stmt")
         """<ifStmt> -> 'if' '(' <expr> ')' <stmt> <elsePart>"""
-        self.match('IDENTIFIER')  # 'if'
+        self.match('RESERVED_WORDS')  # 'if'
         self.match('OPEN_PAREN')
         self.parse_expr()  # Analisa a expressão de condição
         self.match('CLOSE_PAREN')
         self.parse_stmt()  # Analisa a instrução no corpo do if
-        if self.current_token and self.current_token.type == 'IDENTIFIER' and self.current_token.lexeme == 'else':
+        if self.current_token and self.current_token.type == 'RESERVED_WORDS' and self.current_token.lexeme == 'else':
             self.next_token()  # Consome o 'else'
             self.parse_stmt()  # Analisa a instrução no corpo do else
 
     def parse_atrib(self):
         
         """<atrib> -> 'IDENT' '=' <expr>"""
-        if self.current_token.type == 'VARIABLE':
-            var_node = Node("variable", value=self.current_token.lexeme)
+        if self.current_token.type == 'IDENTIFIER':
+            var_node = Node("identifier", value=self.current_token.lexeme)
             self.next_token()  # Consome o identificador
             if self.current_token.type in ['ASSIGN', 'ADD_ASSIGN', 'SUB_ASSIGN', 'MUL_ASSIGN', 'DIV_ASSIGN', 'MOD_ASSIGN']:
                 assign_node = Node("assign_operator", value=self.current_token.lexeme)
@@ -401,9 +443,9 @@ class Parser:
             self.next_token()  # Consome o literal
             #print(f"Literal node created: {literal_node}")
             return literal_node
-        elif self.current_token.type == 'VARIABLE':
+        elif self.current_token.type == 'IDENTIFIER':
             # Se for uma variável, crie um nó e avance
-            variable_node = Node("variable", value=self.current_token.lexeme)
+            variable_node = Node("identifier", value=self.current_token.lexeme)
             self.next_token()
             return variable_node
         else:

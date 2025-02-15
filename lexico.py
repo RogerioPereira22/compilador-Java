@@ -302,7 +302,7 @@ def lexer(source_code, operators, reserved_words, symbols):
                 index += 1
             lexeme = source_code[start_index:index]  # Extrai o lexema do identificador
             # Verifica se é uma palavra reservada ou variável
-            token_type = reserved_words.get(lexeme, "VARIABLE")
+            token_type = reserved_words.get(lexeme, "IDENTIFIER")
             tokens.append(Token(token_type, lexeme, line_number, column_number))  # Adiciona o token à lista
             column_number += len(lexeme)  # Atualiza a coluna
             continue
