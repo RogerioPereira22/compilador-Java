@@ -659,10 +659,7 @@ class Parser:
             operador = self.match(self.current_token.type).lexeme
             right = self.parse_add()
             
-            # Type checking
-            if (isinstance(left, str) and not isinstance(right, str)) or (not isinstance(left, str) and isinstance(right, str)):
-                raise SyntaxError(f"Erro: Comparação inválida entre {type(left)} e {type(right)} na linha {self.current_token.line}")
-            
+            # ✅ Remova a verificação de tipo estática
             temp_var = self.generate_temp()
             self.code.append((operador, temp_var, left, right))
             return temp_var
@@ -756,9 +753,30 @@ class Parser:
         print(f"🔍 DEBUG: Entrando em parse_factor(), token atual: {self.current_token}")  
 
         token_atual = self.current_token  # Obtém o token atual
-        if token_atual.type in ('FLOAT', 'DECIMAL_INT', 'SCIENTIFIC_FLOAT', 'OCTAL_INT', 'HEXADECIMAL_INT'):
-            valor = self.match(token_atual.type).lexeme
-            print(f"✅ DEBUG: Número reconhecido -> {valor}")
+
+        if token_atual.type in ('FLOAT', 'SCIENTIFIC_FLOAT'):
+            # Converte para float
+            valor = float(token_atual.lexeme)
+            self.next_token()
+            print(f"✅ DEBUG: Número float reconhecido -> {valor}")
+            return valor
+        elif token_atual.type == 'DECIMAL_INT':
+            # Converte para int (base 10)
+            valor = int(token_atual.lexeme)
+            self.next_token()
+            print(f"✅ DEBUG: Número inteiro reconhecido -> {valor}")
+            return valor
+        elif token_atual.type == 'OCTAL_INT':
+            # Converte octal (ex: '0755' → 493)
+            valor = int(token_atual.lexeme, 8)
+            self.next_token()
+            print(f"✅ DEBUG: Octal reconhecido → {valor}")
+            return valor
+        elif token_atual.type == 'HEXADECIMAL_INT':
+            # Converte hexadecimal (ex: '0xFF' → 255)
+            valor = int(token_atual.lexeme, 16)
+            self.next_token()
+            print(f"✅ DEBUG: Hexadecimal reconhecido → {valor}")
             return valor
         elif token_atual.type == 'VARIABLE':
             valor = self.match('VARIABLE').lexeme
