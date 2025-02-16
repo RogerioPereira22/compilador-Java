@@ -9,23 +9,14 @@ class Interpretador:
         self.labels = {}  # Dicionário para armazenar rótulos (LABEL)
         self.current_instrucao = 0  # Índice da instrução atual
         self.preprocess_labels()  # Pré-processa os rótulos antes da execução
-    def processar_label(self, label):
-        """Adiciona uma label à tabela de labels se ainda não existir."""
-        if label not in self.labels:
-            self.labels[label] = len(self.instrucoes)
-            print(f"🔍 DEBUG: Adicionando label {label} na posição {self.labels[label]}")
-        else:
-            print(f"⚠️ WARNING: Label duplicada detectada {label}")
 
     def preprocess_labels(self):
-        """Identifica e armazena rótulos (LABEL) para referência futura."""
         for idx, instrucao in enumerate(self.instrucoes):
-            if isinstance(instrucao, (list, tuple)) and instrucao and isinstance(instrucao[0], str):
-                #verifica se a instrução é uma lista ou tupla e se a primeira posição é uma string
-                if instrucao[0].upper() == "LABEL":
-                    label_name = instrucao[1]
-                    self.labels[label_name] = idx  # Mapeia o nome do rótulo para sua posição
-                    print(f"✅ DEBUG: Registrando label {self.labels} na posição {idx}")
+            if isinstance(instrucao, (list, tuple)) and instrucao[0] == "LABEL":
+                label_name = instrucao[1]
+                self.labels[label_name] = idx
+                print(f"✅ DEBUG: Label '{label_name}' registrada na posição {idx}")
+                      
     def armazenar_variaveis(self):
         """ Armazena todas as variáveis declaradas antes da execução """
         for instrucao in self.instrucoes:
@@ -37,15 +28,18 @@ class Interpretador:
     def rodar(self):
         """Executa as instruções interpretadas até atingir um limite de iterações."""
         self.armazenar_variaveis()
-        max_iteracoes = 2000  # Limite de iterações para evitar loops infinitos
+        max_iteracoes = 200 # Limite de iterações para evitar loops infinitos
         contarInteracao = 0
-
+        print("🔍 Labels registradas:", self.labels)  # Antes de executar
         while self.current_instrucao < len(self.instrucoes) and contarInteracao < max_iteracoes:
             contarInteracao += 1
             instrucao = self.instrucoes[self.current_instrucao]
             operator = instrucao[0]  # Identifica a operação da instrução
 
             try:
+                print(f"🔍 DEBUG: Processando instrução: {instrucao}")
+                if not isinstance(instrucao, (tuple, list)) or len(instrucao) < 4:
+                    raise ValueError(f"❌ ERRO: Instrução mal formada! Recebido: {instrucao}")
                 if operator == "=":
                     self.atribuir(instrucao)
                 elif operator == "CALL":
@@ -71,13 +65,13 @@ class Interpretador:
         if contarInteracao >= max_iteracoes:
             print("Número máximo de iterações atingido.")
 
-    def obt_valor(self, operand):
-        """Retorna o valor do operando, garantindo que seja numérico quando necessário."""
+    """def obt_valor(self, operand):
+        #Retorna o valor do operando, garantindo que seja numérico quando necessário.
         
         if operand is None:
             return 0  # 🔴 Evita erros ao operar com valores nulos
 
-        if isinstance(operand, (int, float)):
+        if isinstance(operand, (int, float, bool)):
             return operand  # Já é número, retorna direto
 
         if isinstance(operand, str):
@@ -101,13 +95,29 @@ class Interpretador:
 
             return valor_variavel
 
+        return operand"""
+    def obt_valor(self, operand):
+        if operand is None:
+            return 0
+        
+        # Verifica se é uma variável
+        if isinstance(operand, str) and (operand in self.variaveis or operand in self.temp_vars):
+            valor = self.variaveis.get(operand, self.temp_vars.get(operand))
+            # Converte strings numéricas para int/float
+            if isinstance(valor, str):
+                if valor.startswith('"') and valor.endswith('"'):  # É uma string literal
+                    return valor.strip('"')
+                try:
+                    return float(valor) if '.' in valor else int(valor)
+                except:
+                    return valor
+            return valor
+        
+        # Se for uma string literal (ex: "hello")
+        if isinstance(operand, str) and operand.startswith('"') and operand.endswith('"'):
+            return operand.strip('"')
+        
         return operand
-
-
-
-
-
-
 
     def print_valor(self, valor1, valor2):
         """Imprime corretamente valores e interpreta caracteres especiais como \t e \n."""
@@ -158,17 +168,32 @@ class Interpretador:
         self.armazen_restado(destino, result)
 
     def operarLogica(self, instrucao):
-        """Executa operações lógicas e comparações com operadores corrigidos."""
         operator, destino, op1, op2 = instrucao
         try:
             val1 = self.obt_valor(op1)
             val2 = self.obt_valor(op2) if op2 is not None else None
 
-            # Operadores corrigidos para corresponder ao parser
+            # Verificar se os tipos são comparáveis
+            if (isinstance(val1, (int, float)) and isinstance(val2, str)) or \
+            (isinstance(val2, (int, float)) and isinstance(val1, str)):
+                raise TypeError("Comparação entre número e string não permitida")
+
+            # Permite comparação entre booleanos e inteiros (True=1, False=0)
+            if isinstance(val1, bool) and isinstance(val2, (int, float)):
+                val1 = int(val1)
+            elif isinstance(val2, bool) and isinstance(val1, (int, float)):
+                val2 = int(val2)
+                
+            # Remover a verificação redundante
+            # if isinstance(val1, str) or isinstance(val2, str):
+            #    raise TypeError("Comparação entre string e número não permitida")   
+
+            # Type checking
+            if type(val1) != type(val2):
+                raise TypeError(f"Comparação inválida: {val1} ({type(val1)}) e {val2} ({type(val2)})")
+
+            # Logical operators
             result = {
-                "or": lambda a, b: a or b,
-                "and": lambda a, b: a and b,
-                "!": lambda a, _: not a,
                 "==": lambda a, b: a == b,
                 "!=": lambda a, b: a != b,
                 ">": lambda a, b: a > b,
@@ -213,6 +238,8 @@ class Interpretador:
     def conditional_jump(self, instrucao):
         """Realiza um desvio condicional baseado no valor da condição."""
         _, condition, label1, label2 = instrucao
+        print(f"🔍 DEBUG: Valor de {condition} = {self.obt_valor(condition)}")
+
         condition_valor = self.obt_valor(condition)
 
         # ✅ Depuração: Exibir informações do IF antes da execução
@@ -229,7 +256,7 @@ class Interpretador:
             raise ValueError(f"❌ ERRO CRÍTICO: Label {next_label} não encontrada no interpretador! Labels registradas: {self.labels}")
 
         # Salta para a instrução da label
-        self.current_instrucao = self.labels[next_label] - 1
+        self.current_instrucao = self.labels[next_label]
 
 
 

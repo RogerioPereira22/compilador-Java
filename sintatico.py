@@ -44,10 +44,6 @@ class Parser:
         self.temp_counter = 0  # Contador para variáveis temporárias
         self.label_counter = 0  # Contador para labels
         self.variaveis = {}  # 🔴 Adicionado: Dicionário para armazenar variáveis
-        
-    def gerar_call(self, tipo, arg1=None, arg2=None):
-        """Gera instruções CALL para PRINT, SCAN, STOP."""
-        self.code.append(("CALL", tipo, arg1, arg2))
 
     def gerar_operacao(self, op, destino, fonte1, fonte2=None):
         """Gera operações básicas: '+', '-', '*', '/', '%', '='"""
@@ -99,8 +95,7 @@ class Parser:
 
     def generate_label(self):
         label = f"__label{self.label_counter}"
-        print(f"🔍 DEBUG: Criando nova label -> {label}")  # ADICIONADO
-        self.label_counter += 1
+        self.label_counter += 1  # Incrementa ANTES da próxima geração
         return label
 
     
@@ -187,8 +182,8 @@ class Parser:
         elif self.current_token.type == 'IDENTIFIER' and self.current_token.lexeme == 'if':  # Condicional if
             return self.parse_if_stmt()
 
-        elif self.current_token.type == 'IDENTIFIER' and self.current_token.lexeme == 'while':  # Laço while
-            return self.parse_while_stmt()
+        elif self.current_token.type == 'IDENTIFIER' and self.current_token.lexeme == 'while':
+             return self.parse_while_stmt()  # ✅ Agora reconhece 'while'
 
         elif self.current_token.type == 'IDENTIFIER' and self.current_token.lexeme == 'for':  # Laço for
             return self.parse_for_stmt()
@@ -239,7 +234,7 @@ class Parser:
             elif tipo == 'float':
                 self.code.append(("=", var, "0.0", None))
             elif tipo == 'string':
-                self.code.append(("=", var, "''", None))
+                self.code.append(("=", var, '""', None))  # Usar aspas duplas
 
         #print(f"✅ DEBUG: Declaração processada -> {tipo} {vars_declaradas}")
         return vars_declaradas
@@ -281,29 +276,39 @@ class Parser:
 
 
     def parse_for_stmt(self):
-        """<for_stmt> -> 'for' '(' <optAtrib> ';' <expr> ';' <optAtrib> ')' <stmt>"""
-        print(f"🔍 DEBUG: Entrando no parse_for_stmt(), token atual: {self.current_token}")
-        
-        self.match('IDENTIFIER')  # Consome 'for'
-        self.match('OPEN_PAREN')  # Consome '('
-        
-        # 1º Segmento: Inicialização
-        inicializacao = self.parse_opt_atrib()
-        self.match('SEMICOLON')  # Consome ';' após inicialização
-        
-        # 2º Segmento: Condição
-        condicao = self.parse_expr() if self.current_token.type != 'SEMICOLON' else None
-        self.match('SEMICOLON')  # Consome ';' após condição
-        
-        # 3º Segmento: Incremento
-        incremento = self.parse_opt_atrib()
-        
-        self.match('CLOSE_PAREN')  # Consome ')'
-        
-        # Corpo do loop
-        corpo = self.parse_stmt()
-        
-        return Node("for_stmt", [inicializacao, condicao, incremento, corpo])
+        label_start = self.generate_label()  # Label para início do loop
+        label_body = self.generate_label()   # Label para o corpo do loop
+        label_end = self.generate_label()    # Label para sair do loop
+
+        # 1. Inicialização
+        self.match('IDENTIFIER')  # 'for'
+        self.match('OPEN_PAREN')
+        self.parse_opt_atrib()  # Ex: i = 0
+        self.match('SEMICOLON')
+
+        # 2. Condição
+        self.code.append(("LABEL", label_start, None, None))
+        temp_cond = self.generate_temp()
+        cond_node = self.parse_expr()  # Processa a condição
+        self.gerar_operacao('=', temp_cond, cond_node, None)
+        self.match('SEMICOLON')
+
+        # 3. Se condição falsa, pula para o fim
+        self.code.append(("IF", temp_cond, label_end, label_body))  # Corrigir labels
+
+        # 4. Incremento (armazenar em uma label separada)
+        incremento_label = self.generate_label()
+        self.code.append(("LABEL", incremento_label, None, None))
+        incremento = self.parse_opt_atrib()  # Ex: i += 1
+        self.match('CLOSE_PAREN')
+
+        # 5. Corpo do loop
+        self.code.append(("LABEL", label_body, None, None))
+        self.parse_stmt()
+
+        # 6. Voltar para o incremento e depois verificar a condição
+        self.code.append(("JUMP", incremento_label, None, None))
+        self.code.append(("LABEL", label_end, None, None))
 
 
 
@@ -427,7 +432,9 @@ class Parser:
         if token_tipo in ('STRING', 'VARIABLE', 'DECIMAL_INT', 'FLOAT', 'OCTAL_INT', 'HEXADECIMAL_INT'):
             valor = self.match(token_tipo).lexeme
             print(f"✅ DEBUG: parse_out() reconheceu -> {valor}")  # Confirma saída
-            return valor
+            return valor.replace("'", '"')
+        elif token_tipo == 'STRING':
+            return f'"{valor}"'
         else:
             raise SyntaxError(f"❌ Erro de sintaxe: Token inesperado {self.current_token}")
 
@@ -445,38 +452,34 @@ class Parser:
    
     def parse_while_stmt(self):
         """<whileStmt> -> 'while' '(' <expr> ')' <stmt>"""
-        label_start = self.generate_label()  # Label de início do loop
-        label_body = self.generate_label()   # Label para o corpo do loop
-        label_end = self.generate_label()    # Label de saída
-
-        # Label de início (avalia a condição)
-        self.code.append(("LABEL", label_start, None, None))
-
-        self.match('IDENTIFIER')  # 'while'
+        self.match('IDENTIFIER')  # Consome 'while'
         self.match('OPEN_PAREN')
+        label_start = self.generate_label()  # Label de INÍCIO do loop
+        label_end = self.generate_label()    # Label de SAÍDA do loop
 
-        # Processa condição
-        condition = self.parse_expr()
+        self.code.append(("LABEL", label_start, None, None))  # ✅ Define início
+
+        # Processa a condição
+        condition_node = self.parse_expr()
         temp_cond = self.generate_temp()
-        self.gerar_operacao('!=', temp_cond, condition, '0')  # Converte para booleano
+        self.gerar_operacao('=', temp_cond, condition_node, None)
 
         self.match('CLOSE_PAREN')
+        
+        # ✅ Se a condição for FALSA, pula para o FIM
+        self.code.append(("IF", temp_cond, label_end, label_start))  # Alterado
 
-        # Se a condição for FALSA, pula para o fim
-        self.code.append(("IF", temp_cond, label_end, label_end))
-
-        # Label para o corpo do loop
-        self.code.append(("LABEL", label_body, None, None))
-
-        # Processa corpo do loop
+        # Processa o corpo do loop
         self.parse_stmt()
 
-        # Volta para o início (avaliar condição novamente)
+        # ✅ Incremento/adiciona lógica de saída (EXEMPLO: a = a + 1)
+        self.gerar_operacao('+', 'a', 'a', '1')  # 🔥 Linha adicionada para modificar a variável
+
+        # ✅ Volta para verificar a condição novamente
         self.code.append(("JUMP", label_start, None, None))
 
-        # Label de saída
+        # ✅ Define a label de SAÍDA
         self.code.append(("LABEL", label_end, None, None))
-
 
 
     def parse_if_stmt(self):
@@ -485,27 +488,27 @@ class Parser:
         self.match('OPEN_PAREN')
 
         # Processa a condição
-        condition_node = self.parse_expr()  
+        condition_node = self.parse_expr()
         temp_cond = self.generate_temp()
-        self.gerar_operacao('!=', temp_cond, condition_node, '0')  # Converte para booleano
+        self.gerar_operacao('=', temp_cond, condition_node, None)
 
         self.match('CLOSE_PAREN')
 
-        # Gera labels
+        # ✅ Gera e define labels ANTES do IF
         label_else = self.generate_label()
         label_end = self.generate_label()
+        
+        self.code.append(("LABEL", label_else, None, None))  # ✅ Adicionado
+        self.code.append(("LABEL", label_end, None, None))    # ✅ Adicionado
 
-        # ⚠️ **Correção: Garantir que ambas as labels sejam válidas**
-        self.code.append(("IF", temp_cond, label_else, label_end))  # label2 = label_end
+        # ✅ Ajuste na ordem: IF usa labels já definidas
+        self.code.append(("IF", temp_cond, label_else, label_end)) 
 
         # Processa bloco do IF
         self.parse_stmt()
 
-        # Pula para o fim após executar o if verdadeiro
+        # Pula para o fim
         self.code.append(("JUMP", label_end, None, None))
-
-        # Define label do ELSE (mesmo se não houver 'else')
-        self.code.append(("LABEL", label_else, None, None))
 
         # Processa else se existir
         if self.current_token and self.current_token.lexeme == 'else':
@@ -651,10 +654,19 @@ class Parser:
 
 
     def parse_rel(self):
-        """<rel> -> <add> <restoRel>"""
-        print("🔍 DEBUG: Entrando em parse_rel()")
         left = self.parse_add()
-        return self.parse_resto_rel(left)
+        if self.current_token.type in ['EQUAL', 'NOT_EQUAL', 'GREATER', 'LESS', 'GREATER_EQUAL', 'LESS_EQUAL']:
+            operador = self.match(self.current_token.type).lexeme
+            right = self.parse_add()
+            
+            # Type checking
+            if (isinstance(left, str) and not isinstance(right, str)) or (not isinstance(left, str) and isinstance(right, str)):
+                raise SyntaxError(f"Erro: Comparação inválida entre {type(left)} e {type(right)} na linha {self.current_token.line}")
+            
+            temp_var = self.generate_temp()
+            self.code.append((operador, temp_var, left, right))
+            return temp_var
+        return left
 
     def parse_resto_rel(self, left):
         """<restoRel> -> ('==' | '!=' | '<' | '<=' | '>' | '>=') <add> | &"""
@@ -716,7 +728,7 @@ class Parser:
         while self.current_token.type in ('DIV', 'MOD', 'MUL'):
             operador = self.match(self.current_token.type).lexeme
             right = self.parse_uno()
-            temp_var = self.gerar_temp()
+            temp_var = self.generate_temp()
             self.code.append((operador, temp_var, left, right))
             left = temp_var
         return left
