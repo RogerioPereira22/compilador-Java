@@ -159,7 +159,33 @@ def lexer(source_code, operators, reserved_words, symbols):
                     print(f"Erro: String não fechada na linha {line_number}, coluna {column_number}")
                     sys.exit(1)
                 continue
-            
+            case "'":
+                start_index = index  # Marca o início da string
+                
+                index += 1  # Avança o índice para ignorar a aspa inicial
+                # Continua até encontrar o fechamento da string (aspas duplas não escapadas)
+                while index < len(source_code) and (source_code[index] != "'" or source_code[index - 1] == '\\' ):
+                    index += 1
+                if index < len(source_code):
+                    # Extrai o lexema e adiciona um token do tipo STRING
+                    lexeme = ""
+                    if source_code[index] == '\\' and index + 1 < len(source_code) and (source_code[index + 1] == 'n'):
+                        lexeme += '\n'
+                        index += 1  # Skip the 'n' character
+                    elif source_code[index] == '\\' and index + 1 < len(source_code) and (source_code[index + 1] == 't'):
+                        lexeme += '\t'
+                        index += 1  # Skip the 'n' character    
+                    else:
+                        lexeme += source_code[index]
+                    lexeme = source_code[start_index:index + 1]
+                    tokens.append(Token("STRING", lexeme, line_number, column_number))  # Adiciona o token à lista
+                    column_number += len(lexeme)  # Atualiza a coluna
+                    index += 1  # Avança após a aspa de fechamento
+                else:
+                    # Erro se a string não estiver fechada
+                    print(f"Erro: String não fechada na linha {line_number}, coluna {column_number}")
+                    sys.exit(1)
+                continue
             case '/':
                  start_index = index  # Marca o início do comentário
                  index += 1  # Avança o índice para ignorar a barra inicial
@@ -302,7 +328,7 @@ def lexer(source_code, operators, reserved_words, symbols):
                 index += 1
             lexeme = source_code[start_index:index]  # Extrai o lexema do identificador
             # Verifica se é uma palavra reservada ou variável
-            token_type = reserved_words.get(lexeme, "IDENTIFIER")
+            token_type = reserved_words.get(lexeme, "VARIABLE")
             tokens.append(Token(token_type, lexeme, line_number, column_number))  # Adiciona o token à lista
             column_number += len(lexeme)  # Atualiza a coluna
             continue
@@ -355,7 +381,7 @@ def main(nome_arquivo):
 if __name__ == "__main__":
     if len(sys.argv) > 1:
         lista = main(sys.argv[1])
-        #print(lista)
+        print(lista)
     else:
         
         # Exibe uma mensagem se nenhum argumento foi passado
