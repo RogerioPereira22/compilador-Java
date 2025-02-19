@@ -28,34 +28,34 @@ class Interpretador:
     def rodar(self):
         """Executa as instruções interpretadas até atingir um limite de iterações."""
         self.armazenar_variaveis()
-        max_iteracoes = 200 # Limite de iterações para evitar loops infinitos
+        max_iteracoes = 2000     # Limite de iterações para evitar loops infinitos
         contarInteracao = 0
         print("🔍 Labels registradas:", self.labels)  # Antes de executar
         while self.current_instrucao < len(self.instrucoes) and contarInteracao < max_iteracoes:
             contarInteracao += 1
             instrucao = self.instrucoes[self.current_instrucao]
-            operator = instrucao[0]  # Identifica a operação da instrução
+            self.operator = instrucao[0]  # Identifica a operação da instrução
 
             try:
                 print(f"🔍 DEBUG: Processando instrução: {instrucao}")
                 if not isinstance(instrucao, (tuple, list)) or len(instrucao) < 4:
                     raise ValueError(f"❌ ERRO: Instrução mal formada! Recebido: {instrucao}")
-                if operator == "=":
+                if self.operator == "=":
                     self.atribuir(instrucao)
-                elif operator == "CALL":
+                elif self.operator == "CALL":
                     self.system_call(instrucao)
-                elif operator in ["+", "-", "*", "/", "%", "//"]:
+                elif self.operator in ["+", "-", "*", "/", "%", "//"]:
                     self.operar_aritimetica(instrucao)
-                elif operator in ["||", "&&", "!", "==", "<>", ">", ">=", "<", "<=","!="]:
+                elif self.operator in ["||", "&&", "!", "==", "<>", ">", ">=", "<", "<=","!="]:
                     self.operarLogica(instrucao)
-                elif operator == "IF":
+                elif self.operator == "IF":
                     self.conditional_jump(instrucao)
-                elif operator == "JUMP":
+                elif self.operator == "JUMP":
                     self.jump(instrucao)
-                elif operator == "LABEL":
+                elif self.operator == "LABEL":
                     pass  # Labels já foram processados no pré-processamento
                 else:
-                    raise ValueError(f"Operador desconhecido: {operator}")
+                    raise ValueError(f"Operador desconhecido: {self.operator}")
 
                 self.current_instrucao += 1  # Avança para a próxima instrução
             except Exception as e:
@@ -105,7 +105,7 @@ class Interpretador:
             valor = self.variaveis.get(operand, self.temp_vars.get(operand))
             # Converte strings numéricas para int/float
             if isinstance(valor, str):
-                if valor.startswith('"') and valor.endswith('"'):  # É uma string literal
+                if valor.startswith('"') and valor.endswith('"'):  # string literal
                     return valor.strip('"')
                 try:
                     return float(valor) if '.' in valor else int(valor)
@@ -116,6 +116,16 @@ class Interpretador:
         # Se for uma string literal (ex: "hello")
         if isinstance(operand, str) and operand.startswith('"') and operand.endswith('"'):
             return operand.strip('"')
+        
+        # Se for uma string numérica, converte para int ou float
+        if isinstance(operand, str):
+            try:
+                return int(operand)
+            except ValueError:
+                try:
+                    return float(operand)
+                except:
+                    pass
         
         return operand
 
@@ -236,27 +246,27 @@ class Interpretador:
 
 
     def conditional_jump(self, instrucao):
-        """Realiza um desvio condicional baseado no valor da condição."""
-        _, condition, label1, label2 = instrucao
+        _, condition,label2, label1 = instrucao
         print(f"🔍 DEBUG: Valor de {condition} = {self.obt_valor(condition)}")
 
         condition_valor = self.obt_valor(condition)
+        if condition_valor is None:
+            raise ValueError(f"❌ ERRO: Condição {condition} retornou None! O IF não pode ser avaliado.")
 
-        # ✅ Depuração: Exibir informações do IF antes da execução
-        print(f"🔍 DEBUG: Executando IF: condition={condition}, label1={label1}, label2={label2}")
+        print(f"🔍 DEBUG: Executando IF: condition={condition} ({condition_valor}), label1={label1}, label2={label2}")
 
-        # ⚠️ Se qualquer label for None, gera um erro crítico
         if label1 is None or label2 is None:
             raise ValueError(f"❌ ERRO CRÍTICO: IF gerado com label inválida! Condição={condition}, Label1={label1}, Label2={label2}")
 
         next_label = label1 if condition_valor else label2
 
-        # ✅ Verifica se a label realmente foi registrada antes de acessar
         if next_label not in self.labels:
-            raise ValueError(f"❌ ERRO CRÍTICO: Label {next_label} não encontrada no interpretador! Labels registradas: {self.labels}")
+            print(f"⚠️ WARN: Label {next_label} não encontrada! Labels disponíveis: {self.labels}")
+            return
 
-        # Salta para a instrução da label
         self.current_instrucao = self.labels[next_label]
+
+
 
 
 
@@ -274,13 +284,16 @@ class Interpretador:
         if comando == "PRINT":
             self.print_valor(arg1, arg2)
 
+        # No método system_call, dentro do CASE "SCAN":
         elif comando == "SCAN":
             tipo = arg1
             variavel = arg2
 
-            # 🔴 Se a variável não existe no dicionário, inicializá-la antes da leitura
+            # Se tipo não for especificado, assume int
+            if tipo is None:
+                tipo = "int"  # 🔵 Define um padrão
+
             if variavel not in self.variaveis:
-                #print(f"⚠️ Variável '{variavel}' não declarada antes do SCAN. Inicializando como 0.")
                 self.variaveis[variavel] = 0
 
             valor_lido = input(f"Digite um valor para {variavel} ({tipo}): ")

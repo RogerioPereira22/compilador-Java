@@ -51,13 +51,7 @@ class Parser:
             raise ValueError(f"Operador '{op}' não suportado")
         self.code.append((op, destino, fonte1, fonte2))
 
-    def gerar_label(self, label):
-        """Gera uma label no código intermediário."""
-        label = f"__label{self.label_counter}"
-        print(f"⚠️ DEBUG: Gerando nova label {label}")  # Print de debug
-        self.label_counter += 1
-        print(self.label_counter)
-        self.code.append(("LABEL", label, None, None))    
+   
 
     def next_token(self):
         """Avança para o próximo token na lista."""
@@ -457,9 +451,9 @@ class Parser:
         label_start = self.generate_label()  # Label de INÍCIO do loop
         label_end = self.generate_label()    # Label de SAÍDA do loop
 
-        self.code.append(("LABEL", label_start, None, None))  # ✅ Define início
+        self.code.append(("LABEL", label_start, None, None))  # Marca o início do while
 
-        # Processa a condição
+        # Avalia a condição do while
         condition_node = self.parse_expr()
         temp_cond = self.generate_temp()
         self.gerar_operacao('=', temp_cond, condition_node, None)
@@ -469,16 +463,13 @@ class Parser:
         # ✅ Se a condição for FALSA, pula para o FIM
         self.code.append(("IF", temp_cond, label_end, label_start))  # Alterado
 
-        # Processa o corpo do loop
+        # Corpo do loop
         self.parse_stmt()
 
-        # ✅ Incremento/adiciona lógica de saída (EXEMPLO: a = a + 1)
-        self.gerar_operacao('+', 'a', 'a', '1')  # 🔥 Linha adicionada para modificar a variável
-
-        # ✅ Volta para verificar a condição novamente
+        # Volta para a avaliação da condição
         self.code.append(("JUMP", label_start, None, None))
 
-        # ✅ Define a label de SAÍDA
+        # Define o rótulo de saída do while
         self.code.append(("LABEL", label_end, None, None))
 
 
@@ -497,9 +488,7 @@ class Parser:
         # ✅ Gera e define labels ANTES do IF
         label_else = self.generate_label()
         label_end = self.generate_label()
-        
-        self.code.append(("LABEL", label_else, None, None))  # ✅ Adicionado
-        self.code.append(("LABEL", label_end, None, None))    # ✅ Adicionado
+    
 
         # ✅ Ajuste na ordem: IF usa labels já definidas
         self.code.append(("IF", temp_cond, label_else, label_end)) 
@@ -574,7 +563,12 @@ class Parser:
             self.gerar_operacao(operador[0], temp_var, ident, expr_node)  # operador[0] é '+', '-', etc.
             self.gerar_operacao('=', ident, temp_var, None)
         else:
-            self.gerar_operacao(operador, ident, expr_node, None)
+                if isinstance(expr_node, (int, float, str)):
+                    temp_var = self.generate_temp()
+                    self.gerar_operacao("=", temp_var, expr_node, None)
+                    expr_node = temp_var
+                self.gerar_operacao(operador, ident, expr_node, None)
+
 
         return Node("atrib", [ident, expr_node])
 
