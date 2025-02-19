@@ -25,6 +25,8 @@ int main(){
     system.in.scan(int, a);
     while (a <= 10){
         if( b > a){
+            
+            system.out.print("Entrei no if");
             break;
 
         }
